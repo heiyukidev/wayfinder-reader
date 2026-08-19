@@ -25,6 +25,7 @@ const mapActionsEl = document.getElementById('map-actions')
 const unresolvedFilterEl = document.getElementById('unresolved-filter')
 const mapListEl = document.getElementById('map-list')
 const copySkipBtn = document.getElementById('copy-skip-btn')
+const copyTakeBtn = document.getElementById('copy-take-btn')
 const copyStatusEl = document.getElementById('copy-status')
 const previewEl = document.getElementById('preview')
 const previewCaption = document.getElementById('preview-caption')
@@ -32,6 +33,12 @@ const previewCaption = document.getElementById('preview-caption')
 const EMPTY_PREVIEW_HTML = '<p class="preview-placeholder">Paste a Project path and Load.</p>'
 const SKIP_PROMPT_PREAMBLE =
   'Skip grilling these Tickets in this session. Pick your recommended answer for all the questions. Mark them as resolved.'
+const WAYFINDER_TAKE_PREAMBLE =
+  'Take this Ticket in this session. Claim it. Resolve it (Answer, Status: resolved, Decisions pointer on the Map if one exists).'
+const IMPLEMENT_TAKE_PREAMBLE =
+  'Take this Ticket in this session. Build only this Ticket. Mark it as resolved (Answer, Status: resolved).'
+const SPEC_TAKE_PREAMBLE =
+  'Take this Spec in this session. Publish Tickets from it. Do not set Spec Status to resolved.'
 
 let currentMaps = []
 let currentDecisions = []
@@ -76,6 +83,7 @@ function showEmptyPreview() {
   previewEl.classList.remove('is-loading', 'is-swapping')
   previewEl.classList.add('preview-empty')
   previewEl.innerHTML = EMPTY_PREVIEW_HTML
+  updateCopyControl()
 }
 
 function showLoadingPreview(relPath) {
@@ -215,6 +223,12 @@ function makeTicketRow(ticket) {
   meta.textContent = type ? `${type} · ${status}` : status
 
   previewButton.appendChild(title)
+  if (get(ticket, 'claimed', false)) {
+    const claimed = document.createElement('span')
+    claimed.className = 'claimed-mark'
+    claimed.textContent = 'Claimed'
+    previewButton.appendChild(claimed)
+  }
   if (get(ticket, 'frontier', false)) {
     const frontier = document.createElement('span')
     frontier.className = 'frontier-mark'
@@ -232,8 +246,34 @@ function makeTicketRow(ticket) {
   return row
 }
 
+function findPreviewedTicket() {
+  return find(
+    map(currentDecisions, (group) => ({
+      group,
+      ticket: find(get(group, 'tickets', []), (ticket) => get(ticket, 'path') === selectedRelPath),
+    })),
+    (entry) => get(entry, 'ticket'),
+  )
+}
+
+function findPreviewedSpec() {
+  return find(
+    map(currentDecisions, (group) => ({
+      group,
+      spec: get(group, 'spec.path') === selectedRelPath ? get(group, 'spec') : null,
+    })),
+    (entry) => get(entry, 'spec'),
+  )
+}
+
 function updateCopyControl() {
-  mapActionsEl.hidden = size(selectedTicketPaths) === 0
+  const hasTake = Boolean(
+    get(findPreviewedTicket(), 'ticket.take') || get(findPreviewedSpec(), 'spec.take'),
+  )
+  const hasSkip = size(selectedTicketPaths) > 0
+  mapActionsEl.hidden = !hasSkip && !hasTake
+  copySkipBtn.hidden = !hasSkip
+  copyTakeBtn.hidden = !hasTake
 }
 
 function formatSkipPrompt() {
@@ -257,6 +297,37 @@ function formatSkipPrompt() {
     ),
     '\n\n',
   )
+}
+
+function formatTakePrompt(group, ticket) {
+  const commands = get(ticket, 'take.commands', [])
+  const preamble = includes(commands, '/wayfinder')
+    ? WAYFINDER_TAKE_PREAMBLE
+    : IMPLEMENT_TAKE_PREAMBLE
+  const identityLines = filter(
+    [
+      `Project: ${currentProjectPath}`,
+      get(group, 'path') ? `Map: ${get(group, 'title', '')}` : null,
+      `Ticket: ${get(ticket, 'title', '')}`,
+      `Path: ${get(ticket, 'path', '')}`,
+    ],
+    Boolean,
+  )
+  return join(concat(commands, ['', preamble, ''], identityLines), '\n')
+}
+
+function formatSpecTakePrompt(group, spec) {
+  const commands = get(spec, 'take.commands', [])
+  const identityLines = filter(
+    [
+      `Project: ${currentProjectPath}`,
+      get(group, 'path') ? `Map: ${get(group, 'title', '')}` : null,
+      `Spec: ${get(spec, 'title', '')}`,
+      `Path: ${get(spec, 'path', '')}`,
+    ],
+    Boolean,
+  )
+  return join(concat(commands, ['', SPEC_TAKE_PREAMBLE, ''], identityLines), '\n')
 }
 
 function renderMapList() {
@@ -300,6 +371,7 @@ function renderMapList() {
     }
     mapListEl.appendChild(section)
   })
+  updateCopyControl()
 }
 
 function resolveRelativeLink(href, baseRelPath) {
@@ -364,6 +436,7 @@ async function selectFile(relPath) {
   const requestId = ++fileRequestId
   selectedRelPath = relPath
   renderMapList()
+  updateCopyControl()
   showLoadingPreview(relPath)
 
   try {
@@ -404,6 +477,7 @@ function applyProjectData(data) {
   emptyMapsEl.hidden =
     size(currentDecisions) > 0 || size(currentAdrs) > 0 || size(currentOutOfScope) > 0
   renderMapList()
+  updateCopyControl()
 }
 
 function firstPreviewPath() {
@@ -524,6 +598,29 @@ copySkipBtn.addEventListener('click', async () => {
   } catch {
     copyStatusEl.textContent = ''
     showError('Could not copy the Skip prompt. Check clipboard access and try again.')
+  }
+})
+
+copyTakeBtn.addEventListener('click', async () => {
+  const previewedTicket = findPreviewedTicket()
+  const ticket = get(previewedTicket, 'ticket')
+  let prompt
+  if (get(ticket, 'take')) {
+    prompt = formatTakePrompt(get(previewedTicket, 'group'), ticket)
+  } else {
+    const previewedSpec = findPreviewedSpec()
+    const spec = get(previewedSpec, 'spec')
+    if (!get(spec, 'take')) return
+    prompt = formatSpecTakePrompt(get(previewedSpec, 'group'), spec)
+  }
+
+  try {
+    await navigator.clipboard.writeText(prompt)
+    showError('')
+    copyStatusEl.textContent = 'Copied'
+  } catch {
+    copyStatusEl.textContent = ''
+    showError('Could not copy the Take prompt. Check clipboard access and try again.')
   }
 })
 

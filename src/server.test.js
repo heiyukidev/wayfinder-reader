@@ -136,8 +136,10 @@ test('project load lists Ticket-only Efforts and Finished from Status resolved o
   assert.equal(get(ticketOnly, 'title'), 'first-slice')
   assert.equal(get(ticketOnly, 'path'), null)
   assert.equal(get(ticketOnly, 'finished'), false)
+  assert.deepEqual(get(ticketOnly, ['tickets', 0, 'take']), { commands: ['/wayfinder'] })
   const done = find(body.decisions, (group) => get(group, 'folder') === 'done-run')
   assert.equal(get(done, 'finished'), true)
+  assert.equal(get(done, ['tickets', 0, 'take']), null)
 })
 
 test('project load lists ADRs and Out-of-scope records', async () => {
@@ -278,7 +280,11 @@ test('project load lists a Spec-only Effort that is not finished', async () => {
       title: 'Standalone Spec',
       path: null,
       folder: 'first-slice',
-      spec: { title: 'Standalone Spec', path: '.scratch/first-slice/spec.md' },
+      spec: {
+        title: 'Standalone Spec',
+        path: '.scratch/first-slice/spec.md',
+        take: { commands: ['/to-tickets'] },
+      },
       tickets: [],
       finished: false,
     },
@@ -299,9 +305,11 @@ test('project load lists Spec and Tickets without a Map as one unfinished Effort
   assert.equal(get(group, 'title'), 'Plan')
   assert.equal(get(group, 'path'), null)
   assert.equal(get(group, 'spec.path'), '.scratch/plan-run/spec.md')
+  assert.equal(get(group, 'spec.take'), null)
   assert.equal(get(group, 'finished'), false)
   assert.equal(get(group, ['tickets', 0, 'claimed']), true)
   assert.equal(get(group, ['tickets', 0, 'resolved']), false)
+  assert.equal(get(group, ['tickets', 0, 'take']), null)
 })
 
 test('project select and tree refresh include decisions', async () => {

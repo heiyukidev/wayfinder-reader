@@ -247,7 +247,9 @@ body {
 
 .map-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  align-content: center;
   gap: var(--space-2);
   min-height: 48px;
   padding: var(--space-2) var(--space-3);
@@ -258,39 +260,68 @@ body {
   display: none;
 }
 
-#copy-skip-btn {
-  min-height: 32px;
-  padding: var(--space-1) var(--space-3);
+.map-copy-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+#copy-skip-btn,
+#copy-take-btn {
+  flex: 0 1 auto;
+  min-height: 28px;
+  max-width: 100%;
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--color-accent);
   font: inherit;
+  font-size: var(--text-sm);
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background var(--transition-swap),
     border-color var(--transition-swap);
 }
 
-#copy-skip-btn:hover {
+#copy-skip-btn:hover,
+#copy-take-btn:hover {
   background: var(--color-accent-wash);
 }
 
-#copy-skip-btn:active {
+#copy-skip-btn:active,
+#copy-take-btn:active {
   border-color: var(--color-accent-hover);
   background: rgba(30, 58, 95, 0.16);
 }
 
-#copy-skip-btn:focus-visible {
+#copy-skip-btn:focus-visible,
+#copy-take-btn:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
 
+#copy-skip-btn[hidden],
+#copy-take-btn[hidden] {
+  display: none;
+}
+
 .copy-status {
+  flex: 1 1 auto;
   margin-left: auto;
+  min-width: min-content;
   color: var(--color-ink-muted);
   font-size: var(--text-sm);
+  text-align: right;
+}
+
+.copy-status:empty {
+  display: none;
 }
 
 .filter-toggle {
@@ -477,7 +508,8 @@ body {
 }
 
 .frontier-mark,
-.cycle-mark {
+.cycle-mark,
+.claimed-mark {
   padding: 1px 4px;
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-sm);

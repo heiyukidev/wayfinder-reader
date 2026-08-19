@@ -35,7 +35,10 @@
     <main class="layout">
       <aside class="map-sidebar">
         <div id="map-actions" class="map-actions" hidden>
-          <button id="copy-skip-btn" type="button">Copy Skip prompt</button>
+          <div class="map-copy-controls" role="group" aria-label="Copy prompts">
+            <button id="copy-skip-btn" type="button">Copy Skip prompt</button>
+            <button id="copy-take-btn" type="button" hidden>Copy Take prompt</button>
+          </div>
           <span id="copy-status" class="copy-status" role="status" aria-live="polite"></span>
         </div>
         <label class="filter-toggle">

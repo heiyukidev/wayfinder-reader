@@ -18,6 +18,7 @@ import slice from 'lodash/slice.js'
 import split from 'lodash/split.js'
 import sortBy from 'lodash/sortBy.js'
 import take from 'lodash/take.js'
+import toLower from 'lodash/toLower.js'
 import uniqBy from 'lodash/uniqBy.js'
 import trim from 'lodash/trim.js'
 import {
@@ -209,6 +210,19 @@ function ticketDepth(ticket, ticketsByNumber, cycleNumbers, visiting) {
   return 1 + (max(blockerDepths) ?? 0)
 }
 
+function ticketTake(ticket, frontier, cycle) {
+  if (!frontier || cycle) return null
+  const commandsByType = {
+    research: ['/wayfinder', '/research'],
+    prototype: ['/wayfinder', '/prototype'],
+    grilling: ['/wayfinder', '/grill-with-docs'],
+    task: ['/wayfinder'],
+  }
+  return {
+    commands: get(commandsByType, toLower(get(ticket, 'type', '')), ['/implement']),
+  }
+}
+
 function finalizeTickets(tickets) {
   const ticketsByNumber = keyBy(tickets, 'number')
   const cycleNumbers = findCycleNumbers(tickets, ticketsByNumber)
@@ -220,6 +234,8 @@ function finalizeTickets(tickets) {
       blockers,
       (blockerNumber) => get(ticketsByNumber, [blockerNumber, 'resolved'], false) === true,
     )
+    const frontier = !resolved && !claimed && unblocked
+    const cycle = cycleNumbers.has(get(ticket, 'number'))
     const computed = assign({}, ticket, {
       depth: ticketDepth(
         ticket,
@@ -227,8 +243,9 @@ function finalizeTickets(tickets) {
         cycleNumbers,
         [get(ticket, 'number')],
       ),
-      frontier: !resolved && !claimed && unblocked,
-      cycle: cycleNumbers.has(get(ticket, 'number')),
+      frontier,
+      cycle,
+      take: ticketTake(ticket, frontier, cycle),
     })
     return omit(computed, 'number')
   })
@@ -276,13 +293,19 @@ function discoverEffortNames(scratchReal, projectReal) {
   return sortBy(map(names, (entry) => entry.name))
 }
 
-function specPointer(effortName, effortPath, scratchReal, projectReal) {
+function specTake(ticketCount) {
+  if (ticketCount > 0) return null
+  return { commands: ['/to-tickets'] }
+}
+
+function specPointer(effortName, effortPath, scratchReal, projectReal, ticketCount) {
   if (!isValidSpec(projectReal, scratchReal, effortPath)) return null
   const specPath = path.join(effortPath, 'spec.md')
   const title = readHeading(readText(specPath))
   return {
     title: title || 'spec.md',
     path: `.scratch/${effortName}/spec.md`,
+    take: specTake(ticketCount),
   }
 }
 
@@ -290,11 +313,11 @@ function buildDecisions(scratchReal, projectReal) {
   return map(discoverEffortNames(scratchReal, projectReal), (effortName) => {
     const effortPath = path.join(scratchReal, effortName)
     const hasMap = isValidMap(projectReal, scratchReal, effortPath)
-    const spec = specPointer(effortName, effortPath, scratchReal, projectReal)
     const issuesPath = resolveIssuesPath(effortPath, scratchReal, projectReal)
     const tickets = finalizeTickets(
       map(listTicketEntries(issuesPath), (entry) => parseTicket(effortName, issuesPath, entry)),
     )
+    const spec = specPointer(effortName, effortPath, scratchReal, projectReal, size(tickets))
     const mapTitle = hasMap ? readHeading(readText(path.join(effortPath, 'map.md'))) : ''
     const title = mapTitle || get(spec, 'title', '') || effortName
     return {

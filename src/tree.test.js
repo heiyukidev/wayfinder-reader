@@ -5,6 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import map from 'lodash/map.js'
 import get from 'lodash/get.js'
+import find from 'lodash/find.js'
 import some from 'lodash/some.js'
 import { buildReadableTree, discoverMaps } from './tree.js'
 
@@ -143,7 +144,11 @@ test('decisions lists only numbered Ticket files under Maps', () => {
       title: 'Active Map',
       path: '.scratch/active-effort/map.md',
       folder: 'active-effort',
-      spec: { title: 'Active Spec', path: '.scratch/active-effort/spec.md' },
+      spec: {
+        title: 'Active Spec',
+        path: '.scratch/active-effort/spec.md',
+        take: null,
+      },
       tickets: [
         {
           title: 'First Ticket',
@@ -156,6 +161,7 @@ test('decisions lists only numbered Ticket files under Maps', () => {
           resolved: false,
           claimed: false,
           cycle: false,
+          take: { commands: ['/implement'] },
         },
       ],
       finished: false,
@@ -180,7 +186,11 @@ test('decisions lists only numbered Ticket files under Maps', () => {
       title: 'Standalone Spec',
       path: null,
       folder: 'spec-only',
-      spec: { title: 'Standalone Spec', path: '.scratch/spec-only/spec.md' },
+      spec: {
+        title: 'Standalone Spec',
+        path: '.scratch/spec-only/spec.md',
+        take: { commands: ['/to-tickets'] },
+      },
       tickets: [],
       finished: false,
     },
@@ -247,6 +257,7 @@ test('decisions computes blocker depth and Frontier from Ticket status', () => {
           resolved: true,
           claimed: false,
           cycle: false,
+          take: null,
         },
         {
           title: 'Claimed Decision',
@@ -259,6 +270,7 @@ test('decisions computes blocker depth and Frontier from Ticket status', () => {
           resolved: false,
           claimed: true,
           cycle: false,
+          take: null,
         },
         {
           title: 'Deep Ticket',
@@ -271,6 +283,7 @@ test('decisions computes blocker depth and Frontier from Ticket status', () => {
           resolved: false,
           claimed: false,
           cycle: false,
+          take: null,
         },
         {
           title: 'Ready After Resolved',
@@ -283,6 +296,7 @@ test('decisions computes blocker depth and Frontier from Ticket status', () => {
           resolved: false,
           claimed: false,
           cycle: false,
+          take: { commands: ['/implement'] },
         },
         {
           title: 'Omitted Blockers',
@@ -295,6 +309,7 @@ test('decisions computes blocker depth and Frontier from Ticket status', () => {
           resolved: false,
           claimed: false,
           cycle: false,
+          take: { commands: ['/implement'] },
         },
         {
           title: 'Empty Blockers',
@@ -307,6 +322,7 @@ test('decisions computes blocker depth and Frontier from Ticket status', () => {
           resolved: false,
           claimed: false,
           cycle: false,
+          take: { commands: ['/implement'] },
         },
         {
           title: 'Dangling Blocker',
@@ -319,6 +335,7 @@ test('decisions computes blocker depth and Frontier from Ticket status', () => {
           resolved: false,
           claimed: false,
           cycle: false,
+          take: null,
         },
       ],
       finished: false,
@@ -366,6 +383,7 @@ test('decisions flags blocker cycles and emits every Ticket once', () => {
           resolved: false,
           claimed: false,
           cycle: true,
+          take: null,
         },
         {
           title: 'Beta',
@@ -378,6 +396,7 @@ test('decisions flags blocker cycles and emits every Ticket once', () => {
           resolved: false,
           claimed: false,
           cycle: true,
+          take: null,
         },
         {
           title: 'After Cycle',
@@ -390,6 +409,7 @@ test('decisions flags blocker cycles and emits every Ticket once', () => {
           resolved: false,
           claimed: false,
           cycle: false,
+          take: null,
         },
       ],
       finished: false,
@@ -422,4 +442,131 @@ test('decisions ignores an issues symlink outside the Project sandbox', () => {
       finished: false,
     },
   ])
+})
+
+test('Frontier wayfinder Types put ordered skill commands on take', () => {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-take-types-'))
+  const effort = path.join(project, '.scratch', 'typed')
+  const issues = path.join(effort, 'issues')
+
+  fs.mkdirSync(issues, { recursive: true })
+  fs.writeFileSync(path.join(effort, 'map.md'), '# Typed Map')
+  fs.writeFileSync(
+    path.join(issues, '01-research.md'),
+    '# Research Ticket\n\nType: research\nStatus:\nBlocked by:\n',
+  )
+  fs.writeFileSync(
+    path.join(issues, '02-prototype.md'),
+    '# Prototype Ticket\n\nType: prototype\nStatus:\nBlocked by:\n',
+  )
+  fs.writeFileSync(
+    path.join(issues, '03-grilling.md'),
+    '# Grilling Ticket\n\nType: grilling\nStatus:\nBlocked by:\n',
+  )
+  fs.writeFileSync(
+    path.join(issues, '04-task.md'),
+    '# Task Ticket\n\nType: task\nStatus:\nBlocked by:\n',
+  )
+
+  const { decisions } = buildReadableTree(project)
+  const tickets = get(decisions, [0, 'tickets'], [])
+
+  assert.deepEqual(get(tickets, [0, 'take']), { commands: ['/wayfinder', '/research'] })
+  assert.deepEqual(get(tickets, [1, 'take']), { commands: ['/wayfinder', '/prototype'] })
+  assert.deepEqual(get(tickets, [2, 'take']), { commands: ['/wayfinder', '/grill-with-docs'] })
+  assert.deepEqual(get(tickets, [3, 'take']), { commands: ['/wayfinder'] })
+})
+
+test('Type matching for take commands is case-insensitive', () => {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-take-case-'))
+  const effort = path.join(project, '.scratch', 'cased')
+  const issues = path.join(effort, 'issues')
+
+  fs.mkdirSync(issues, { recursive: true })
+  fs.writeFileSync(path.join(effort, 'map.md'), '# Cased Map')
+  fs.writeFileSync(
+    path.join(issues, '01-research.md'),
+    '# Research Ticket\n\nType: Research\nStatus:\nBlocked by:\n',
+  )
+
+  const { decisions } = buildReadableTree(project)
+  assert.deepEqual(get(decisions, [0, 'tickets', 0, 'take']), {
+    commands: ['/wayfinder', '/research'],
+  })
+})
+
+test('Frontier empty Type, decision, and implementation Tickets take /implement', () => {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-take-implement-'))
+  const effort = path.join(project, '.scratch', 'build')
+  const issues = path.join(effort, 'issues')
+
+  fs.mkdirSync(issues, { recursive: true })
+  fs.writeFileSync(path.join(effort, 'map.md'), '# Build Map')
+  fs.writeFileSync(path.join(issues, '01-empty.md'), '# Empty Type\n\nStatus:\nBlocked by:\n')
+  fs.writeFileSync(
+    path.join(issues, '02-decision.md'),
+    '# Decision Ticket\n\nType: decision\nStatus:\nBlocked by:\n',
+  )
+  fs.writeFileSync(
+    path.join(issues, '03-implementation.md'),
+    '# Implementation Ticket\n\nType: implementation\nStatus:\nBlocked by:\n',
+  )
+  fs.writeFileSync(
+    path.join(issues, '04-ready.md'),
+    '# Ready Only\n\nStatus: ready-for-agent\n',
+  )
+  fs.writeFileSync(
+    path.join(issues, '05-unknown.md'),
+    '# Unknown Type\n\nType: mystery\nStatus:\nBlocked by:\n',
+  )
+
+  const { decisions } = buildReadableTree(project)
+  const tickets = get(decisions, [0, 'tickets'], [])
+  const implement = { commands: ['/implement'] }
+
+  assert.deepEqual(get(tickets, [0, 'take']), implement)
+  assert.deepEqual(get(tickets, [1, 'take']), implement)
+  assert.deepEqual(get(tickets, [2, 'take']), implement)
+  assert.deepEqual(get(tickets, [3, 'take']), implement)
+  assert.deepEqual(get(tickets, [4, 'take']), implement)
+})
+
+test('Spec-only Effort Spec take commands are /to-tickets', () => {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-spec-take-'))
+  const specOnly = path.join(project, '.scratch', 'spec-only')
+  fs.mkdirSync(specOnly, { recursive: true })
+  fs.writeFileSync(path.join(specOnly, 'spec.md'), '# Remaining Spec\n\nStatus: ready-for-agent\n')
+
+  const { decisions } = buildReadableTree(project)
+  assert.deepEqual(get(decisions, [0, 'spec', 'take', 'commands']), ['/to-tickets'])
+})
+
+test('Spec with sibling Tickets including claimed-only is not takeable', () => {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-spec-claimed-'))
+  const claimedOnly = path.join(project, '.scratch', 'claimed-slice')
+  const claimedIssues = path.join(claimedOnly, 'issues')
+  const frontier = path.join(project, '.scratch', 'active-slice')
+  const frontierIssues = path.join(frontier, 'issues')
+
+  fs.mkdirSync(claimedIssues, { recursive: true })
+  fs.mkdirSync(frontierIssues, { recursive: true })
+  fs.writeFileSync(path.join(claimedOnly, 'spec.md'), '# Claimed Sibling Spec\n')
+  fs.writeFileSync(
+    path.join(claimedIssues, '01-held.md'),
+    '# Held Ticket\n\nType: task\nStatus: claimed\n',
+  )
+  fs.writeFileSync(path.join(frontier, 'map.md'), '# Active Slice\n')
+  fs.writeFileSync(path.join(frontier, 'spec.md'), '# Active Slice Spec\n')
+  fs.writeFileSync(
+    path.join(frontierIssues, '01-open.md'),
+    '# Open Ticket\n\nType: task\nStatus:\nBlocked by:\n',
+  )
+
+  const { decisions } = buildReadableTree(project)
+  const claimedGroup = find(decisions, (group) => get(group, 'folder') === 'claimed-slice')
+  const frontierGroup = find(decisions, (group) => get(group, 'folder') === 'active-slice')
+
+  assert.equal(get(claimedGroup, 'spec.take'), null)
+  assert.equal(get(frontierGroup, 'spec.take'), null)
+  assert.deepEqual(get(frontierGroup, ['tickets', 0, 'take']), { commands: ['/wayfinder'] })
 })
