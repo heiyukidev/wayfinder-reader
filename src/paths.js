@@ -33,8 +33,18 @@ export function validateProjectPath(input) {
   return { ok: true, projectPath: normalized }
 }
 
+const EFFORT_SLUG_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
+
 export function scratchRoot(projectPath) {
   return path.join(projectPath, '.scratch')
+}
+
+export function archiveRoot(projectPath) {
+  return path.join(scratchRoot(projectPath), '.archive')
+}
+
+export function isEffortSlug(slug) {
+  return typeof slug === 'string' && EFFORT_SLUG_PATTERN.test(slug) && slug !== '.archive'
 }
 
 export function isUnderRoot(realPath, rootReal) {
@@ -126,6 +136,47 @@ export function isArchiveRelPath(relPath) {
   if (!relPath || typeof relPath !== 'string') return false
   const posix = relPath.replace(/\\/g, '/')
   return posix === '.scratch/.archive' || posix.startsWith('.scratch/.archive/')
+}
+
+export function resolveLiveEffortDir(projectPath, slug) {
+  if (!isEffortSlug(slug)) {
+    return { ok: false, error: 'Invalid Effort', status: 403 }
+  }
+
+  const roots = resolveProjectRoots(projectPath)
+  if (!roots.ok) return roots
+
+  const { projectReal, scratchReal } = roots
+  const absPath = path.join(scratchRoot(projectPath), slug)
+  if (!fs.existsSync(absPath)) {
+    return { ok: false, error: 'Effort not found', status: 404 }
+  }
+
+  let realPath
+  try {
+    realPath = fs.realpathSync(absPath)
+  } catch {
+    return { ok: false, error: 'Cannot resolve path', status: 403 }
+  }
+
+  if (!isUnderRoot(realPath, scratchReal) || !isUnderRoot(realPath, projectReal)) {
+    return { ok: false, error: 'Path escapes .scratch sandbox', status: 403 }
+  }
+
+  const rel = path.relative(scratchReal, realPath).replace(/\\/g, '/')
+  if (rel !== slug || rel.includes('/') || rel === '.archive' || rel.startsWith('.archive/')) {
+    return { ok: false, error: 'Path must be a live Effort', status: 403 }
+  }
+
+  if (!fs.statSync(realPath).isDirectory()) {
+    return { ok: false, error: 'Effort not found', status: 404 }
+  }
+
+  return {
+    ok: true,
+    absPath: realPath,
+    relPath: canonicalScratchRel(scratchReal, realPath),
+  }
 }
 
 export function resolveProjectRelPath(projectPath, relPath) {

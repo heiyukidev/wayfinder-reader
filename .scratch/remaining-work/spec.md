@@ -1,6 +1,6 @@
 # Remaining work desk: Unresolved filter, Archive, and named holes
 
-Status: ready-for-agent
+Status: resolved
 
 ## Problem Statement
 
