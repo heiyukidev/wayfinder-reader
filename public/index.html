@@ -28,7 +28,7 @@
     <div class="banners">
       <div id="error" class="error" role="alert" hidden></div>
       <div id="empty-maps" class="empty-maps" aria-live="polite" hidden>
-        This Project has no Maps (no <code>.scratch/*/map.md</code>).
+        This Project has no Efforts, ADRs, or Out-of-scope records.
       </div>
     </div>
 
@@ -38,6 +38,10 @@
           <button id="copy-skip-btn" type="button">Copy Skip prompt</button>
           <span id="copy-status" class="copy-status" role="status" aria-live="polite"></span>
         </div>
+        <label class="filter-toggle">
+          <input id="unresolved-filter" type="checkbox" checked />
+          Remaining work
+        </label>
         <nav id="map-list" class="map-list" aria-label="Map list"></nav>
       </aside>
       <section class="preview-pane">

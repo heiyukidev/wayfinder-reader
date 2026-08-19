@@ -18,6 +18,7 @@ import slice from 'lodash/slice.js'
 import split from 'lodash/split.js'
 import sortBy from 'lodash/sortBy.js'
 import take from 'lodash/take.js'
+import uniqBy from 'lodash/uniqBy.js'
 import trim from 'lodash/trim.js'
 import {
   scratchRoot,
@@ -44,16 +45,25 @@ function readDirEntries(dirPath) {
   }
 }
 
-function isValidMap(projectReal, scratchReal, effortDir) {
-  const mapPath = path.join(effortDir, 'map.md')
-  if (!fs.existsSync(mapPath)) return false
-  let mapReal
+function isValidEffortFile(projectReal, scratchReal, filePath) {
   try {
-    mapReal = fs.realpathSync(mapPath)
+    const real = fs.realpathSync(filePath)
+    return (
+      isUnderRoot(real, scratchReal) &&
+      isUnderRoot(real, projectReal) &&
+      fs.statSync(real).isFile()
+    )
   } catch {
     return false
   }
-  return isUnderRoot(mapReal, scratchReal) && isUnderRoot(mapReal, projectReal)
+}
+
+function isValidMap(projectReal, scratchReal, effortDir) {
+  return isValidEffortFile(projectReal, scratchReal, path.join(effortDir, 'map.md'))
+}
+
+function isValidSpec(projectReal, scratchReal, effortDir) {
+  return isValidEffortFile(projectReal, scratchReal, path.join(effortDir, 'spec.md'))
 }
 
 function buildNode(projectReal, scratchReal, absPath, relPath, name, type) {
@@ -238,45 +248,159 @@ function resolveIssuesPath(effortPath, scratchReal, projectReal) {
   }
 }
 
-function buildDecisions(maps, scratchReal, projectReal) {
-  return map(maps, (mapPath) => {
-    const effortName = get(mapPath.match(/^\.scratch\/([^/]+)\/map\.md$/), 1, '')
-    const effortPath = path.join(scratchReal, effortName)
-    const issuesPath = resolveIssuesPath(effortPath, scratchReal, projectReal)
-    const ticketEntries = sortBy(
-      filter(
-        issuesPath ? readDirEntries(issuesPath) : [],
-        (entry) => entry.isFile() && /^\d+-.*\.md$/i.test(entry.name),
-      ),
-      (entry) => Number(get(entry.name.match(/^(\d+)-/), 1, 0)),
-    )
+function listTicketEntries(issuesPath) {
+  return sortBy(
+    filter(
+      issuesPath ? readDirEntries(issuesPath) : [],
+      (entry) => entry.isFile() && /^\d+-.*\.md$/i.test(entry.name),
+    ),
+    (entry) => Number(get(entry.name.match(/^(\d+)-/), 1, 0)),
+  )
+}
 
+function hasTickets(effortPath, scratchReal, projectReal) {
+  return size(listTicketEntries(resolveIssuesPath(effortPath, scratchReal, projectReal))) > 0
+}
+
+function discoverEffortNames(scratchReal, projectReal) {
+  if (!fs.existsSync(scratchReal)) return []
+  const names = filter(readDirEntries(scratchReal), (entry) => {
+    if (!entry.isDirectory() || shouldSkipDir(entry.name)) return false
+    const effortDir = path.join(scratchReal, entry.name)
+    return (
+      isValidMap(projectReal, scratchReal, effortDir) ||
+      isValidSpec(projectReal, scratchReal, effortDir) ||
+      hasTickets(effortDir, scratchReal, projectReal)
+    )
+  })
+  return sortBy(map(names, (entry) => entry.name))
+}
+
+function specPointer(effortName, effortPath, scratchReal, projectReal) {
+  if (!isValidSpec(projectReal, scratchReal, effortPath)) return null
+  const specPath = path.join(effortPath, 'spec.md')
+  const title = readHeading(readText(specPath))
+  return {
+    title: title || 'spec.md',
+    path: `.scratch/${effortName}/spec.md`,
+  }
+}
+
+function buildDecisions(scratchReal, projectReal) {
+  return map(discoverEffortNames(scratchReal, projectReal), (effortName) => {
+    const effortPath = path.join(scratchReal, effortName)
+    const hasMap = isValidMap(projectReal, scratchReal, effortPath)
+    const spec = specPointer(effortName, effortPath, scratchReal, projectReal)
+    const issuesPath = resolveIssuesPath(effortPath, scratchReal, projectReal)
+    const tickets = finalizeTickets(
+      map(listTicketEntries(issuesPath), (entry) => parseTicket(effortName, issuesPath, entry)),
+    )
+    const mapTitle = hasMap ? readHeading(readText(path.join(effortPath, 'map.md'))) : ''
+    const title = mapTitle || get(spec, 'title', '') || effortName
     return {
-      title: readHeading(readText(path.join(effortPath, 'map.md'))),
-      path: mapPath,
-      tickets: finalizeTickets(
-        map(ticketEntries, (entry) => parseTicket(effortName, issuesPath, entry)),
-      ),
+      title,
+      path: hasMap ? `.scratch/${effortName}/map.md` : null,
+      folder: effortName,
+      spec,
+      tickets,
+      finished: size(tickets) > 0 && every(tickets, (ticket) => get(ticket, 'resolved', false)),
     }
   })
 }
 
+function projectRelPosix(projectReal, realPath) {
+  return path.relative(projectReal, realPath).replace(/\\/g, '/')
+}
+
+function listMdFiles(dirPath, projectReal) {
+  const entries = sortBy(
+    filter(readDirEntries(dirPath), (entry) => entry.isFile() && /\.md$/i.test(entry.name)),
+    (entry) => entry.name,
+  )
+  return filter(
+    map(entries, (entry) => {
+      const absPath = path.join(dirPath, entry.name)
+      let realPath
+      try {
+        realPath = fs.realpathSync(absPath)
+      } catch {
+        return null
+      }
+      if (!isUnderRoot(realPath, projectReal) || !fs.statSync(realPath).isFile()) return null
+      const title = readHeading(readText(realPath))
+      return {
+        title: title || entry.name,
+        path: projectRelPosix(projectReal, realPath),
+      }
+    }),
+    Boolean,
+  )
+}
+
+function contextMapAdrDirs(projectPath, projectReal) {
+  const mapPath = path.join(projectPath, 'CONTEXT-MAP.md')
+  if (!fs.existsSync(mapPath)) return []
+  const hrefs = map(
+    [...readText(mapPath).matchAll(/\[[^\]]*\]\(([^)]+)\)/g)],
+    (match) => trim(get(split(get(match, 1, ''), /\s+/), 0, '')).replace(/['"]/g, ''),
+  )
+  return filter(
+    map(hrefs, (href) => {
+      if (!href || path.basename(href) !== 'CONTEXT.md' || includes(href, '..')) return null
+      const absPath = path.resolve(projectPath, href)
+      let realPath
+      try {
+        realPath = fs.realpathSync(absPath)
+      } catch {
+        return null
+      }
+      if (!isUnderRoot(realPath, projectReal) || !fs.statSync(realPath).isFile()) return null
+      return path.join(path.dirname(realPath), 'docs', 'adr')
+    }),
+    Boolean,
+  )
+}
+
+export function listProjectDocs(projectPath) {
+  let projectReal
+  try {
+    projectReal = fs.realpathSync(projectPath)
+  } catch {
+    return { adrs: [], outOfScope: [] }
+  }
+
+  const adrDirs = concat(
+    [path.join(projectPath, 'docs', 'adr')],
+    contextMapAdrDirs(projectPath, projectReal),
+  )
+  const adrs = uniqBy(
+    concat(
+      ...map(adrDirs, (dirPath) => listMdFiles(dirPath, projectReal)),
+    ),
+    'path',
+  )
+  const outOfScope = listMdFiles(path.join(projectPath, '.out-of-scope'), projectReal)
+  return { adrs, outOfScope }
+}
+
 export function buildReadableTree(projectPath) {
+  const docs = listProjectDocs(projectPath)
+  const empty = { tree: null, maps: [], decisions: [], ...docs }
   const scratch = scratchRoot(projectPath)
   if (!fs.existsSync(scratch)) {
-    return { tree: null, maps: [], decisions: [] }
+    return empty
   }
 
   const roots = resolveProjectRoots(projectPath)
   if (!roots.ok) {
-    return { tree: null, maps: [], decisions: [] }
+    return empty
   }
 
   const { projectReal, scratchReal } = roots
   const maps = discoverMaps(scratchReal, projectReal)
   const tree = buildNode(projectReal, scratchReal, scratchReal, '.scratch', '.scratch', 'dir')
-  const decisions = buildDecisions(maps, scratchReal, projectReal)
-  return { tree, maps, decisions }
+  const decisions = buildDecisions(scratchReal, projectReal)
+  return { tree, maps, decisions, ...docs }
 }
 
 export function listMapsOnly(projectPath) {

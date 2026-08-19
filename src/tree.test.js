@@ -142,6 +142,8 @@ test('decisions lists only numbered Ticket files under Maps', () => {
     {
       title: 'Active Map',
       path: '.scratch/active-effort/map.md',
+      folder: 'active-effort',
+      spec: { title: 'Active Spec', path: '.scratch/active-effort/spec.md' },
       tickets: [
         {
           title: 'First Ticket',
@@ -156,16 +158,31 @@ test('decisions lists only numbered Ticket files under Maps', () => {
           cycle: false,
         },
       ],
+      finished: false,
     },
     {
       title: 'Empty Map',
       path: '.scratch/empty-effort/map.md',
+      folder: 'empty-effort',
+      spec: null,
       tickets: [],
+      finished: false,
     },
     {
       title: 'Missing Issues Map',
       path: '.scratch/missing-issues/map.md',
+      folder: 'missing-issues',
+      spec: null,
       tickets: [],
+      finished: false,
+    },
+    {
+      title: 'Standalone Spec',
+      path: null,
+      folder: 'spec-only',
+      spec: { title: 'Standalone Spec', path: '.scratch/spec-only/spec.md' },
+      tickets: [],
+      finished: false,
     },
   ])
   assert.equal(
@@ -216,6 +233,8 @@ test('decisions computes blocker depth and Frontier from Ticket status', () => {
     {
       title: 'Blocking Map',
       path: '.scratch/blockers/map.md',
+      folder: 'blockers',
+      spec: null,
       tickets: [
         {
           title: 'Resolved Groundwork',
@@ -302,6 +321,7 @@ test('decisions computes blocker depth and Frontier from Ticket status', () => {
           cycle: false,
         },
       ],
+      finished: false,
     },
   ])
 })
@@ -332,6 +352,8 @@ test('decisions flags blocker cycles and emits every Ticket once', () => {
     {
       title: 'Cyclic Map',
       path: '.scratch/cycle/map.md',
+      folder: 'cycle',
+      spec: null,
       tickets: [
         {
           title: 'Alpha',
@@ -370,6 +392,7 @@ test('decisions flags blocker cycles and emits every Ticket once', () => {
           cycle: false,
         },
       ],
+      finished: false,
     },
   ])
 })
@@ -393,7 +416,10 @@ test('decisions ignores an issues symlink outside the Project sandbox', () => {
     {
       title: 'Safe Map',
       path: '.scratch/effort/map.md',
+      folder: 'effort',
+      spec: null,
       tickets: [],
+      finished: false,
     },
   ])
 })

@@ -3,6 +3,7 @@ import concat from '/vendor/lodash-es/concat.js'
 import dropRight from '/vendor/lodash-es/dropRight.js'
 import forEach from '/vendor/lodash-es/forEach.js'
 import filter from '/vendor/lodash-es/filter.js'
+import find from '/vendor/lodash-es/find.js'
 import includes from '/vendor/lodash-es/includes.js'
 import join from '/vendor/lodash-es/join.js'
 import map from '/vendor/lodash-es/map.js'
@@ -21,6 +22,7 @@ const recentsSelect = document.getElementById('recents')
 const errorEl = document.getElementById('error')
 const emptyMapsEl = document.getElementById('empty-maps')
 const mapActionsEl = document.getElementById('map-actions')
+const unresolvedFilterEl = document.getElementById('unresolved-filter')
 const mapListEl = document.getElementById('map-list')
 const copySkipBtn = document.getElementById('copy-skip-btn')
 const copyStatusEl = document.getElementById('copy-status')
@@ -33,7 +35,10 @@ const SKIP_PROMPT_PREAMBLE =
 
 let currentMaps = []
 let currentDecisions = []
+let currentAdrs = []
+let currentOutOfScope = []
 let currentProjectPath = ''
+let remainingWorkOnly = true
 let selectedTicketPaths = []
 let selectedRelPath = null
 let fileRequestId = 0
@@ -89,24 +94,79 @@ async function api(path, options) {
   return data
 }
 
-function makeMapRow(group) {
-  const mapPath = get(group, 'path', '')
+function effortPreviewPath(group) {
+  return (
+    get(group, 'path') ||
+    get(group, 'spec.path') ||
+    get(group, ['tickets', 0, 'path']) ||
+    ''
+  )
+}
+
+function makeDocRow(doc) {
+  const docPath = get(doc, 'path', '')
   const row = document.createElement('button')
   row.type = 'button'
   row.className = 'map-row map-heading-row'
-  if (mapPath === selectedRelPath) row.classList.add('selected')
-  row.addEventListener('click', () => selectFile(mapPath))
+  if (docPath === selectedRelPath) row.classList.add('selected')
+  row.addEventListener('click', () => selectFile(docPath))
 
   const title = document.createElement('span')
   title.className = 'map-title'
-  title.textContent = get(group, 'title', mapPath)
+  title.textContent = get(doc, 'title', docPath)
+  const pathEl = document.createElement('span')
+  pathEl.className = 'map-path'
+  pathEl.textContent = docPath
+  row.appendChild(title)
+  row.appendChild(pathEl)
+  return row
+}
+
+function makeMapRow(group) {
+  const previewPath = effortPreviewPath(group)
+  const header = document.createElement('div')
+  header.className = 'map-group-head'
+
+  const row = document.createElement('button')
+  row.type = 'button'
+  row.className = 'map-row map-heading-row'
+  if (previewPath && previewPath === selectedRelPath) row.classList.add('selected')
+  if (previewPath) {
+    row.addEventListener('click', () => selectFile(previewPath))
+  }
+
+  const title = document.createElement('span')
+  title.className = 'map-title'
+  title.textContent = get(group, 'title', get(group, 'folder', ''))
   const mapPathEl = document.createElement('span')
   mapPathEl.className = 'map-path'
-  mapPathEl.textContent = mapPath
-
+  mapPathEl.textContent = previewPath || get(group, 'folder', '')
   row.appendChild(title)
   row.appendChild(mapPathEl)
-  return row
+  header.appendChild(row)
+
+  if (get(group, 'spec.path') && get(group, 'path')) {
+    const specRow = makeDocRow({
+      title: get(group, 'spec.title', 'Spec'),
+      path: get(group, 'spec.path'),
+    })
+    specRow.classList.add('ticket-row')
+    header.appendChild(specRow)
+  }
+
+  if (get(group, 'finished')) {
+    const archiveBtn = document.createElement('button')
+    archiveBtn.type = 'button'
+    archiveBtn.className = 'archive-btn'
+    archiveBtn.textContent = 'Archive'
+    archiveBtn.addEventListener('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      archiveEffort(get(group, 'folder', ''))
+    })
+    header.appendChild(archiveBtn)
+  }
+  return header
 }
 
 function makeTicketRow(ticket) {
@@ -201,17 +261,40 @@ function formatSkipPrompt() {
 
 function renderMapList() {
   mapListEl.innerHTML = ''
-  forEach(currentDecisions, (group) => {
+  const appendSection = (label, docs) => {
+    if (size(docs) === 0) return
+    const section = document.createElement('section')
+    section.className = 'map-group'
+    const heading = document.createElement('h2')
+    heading.className = 'doc-section-title'
+    heading.textContent = label
+    section.appendChild(heading)
+    forEach(docs, (doc) => section.appendChild(makeDocRow(doc)))
+    mapListEl.appendChild(section)
+  }
+
+  appendSection('ADRs', currentAdrs)
+  appendSection('Out of scope', currentOutOfScope)
+
+  const visibleGroups = remainingWorkOnly
+    ? filter(currentDecisions, (group) => !get(group, 'finished', false))
+    : currentDecisions
+
+  forEach(visibleGroups, (group) => {
     const section = document.createElement('section')
     section.className = 'map-group'
     section.appendChild(makeMapRow(group))
 
-    const tickets = get(group, 'tickets', [])
+    const tickets = remainingWorkOnly
+      ? filter(get(group, 'tickets', []), (ticket) => !get(ticket, 'resolved', false))
+      : get(group, 'tickets', [])
     if (size(tickets) === 0) {
-      const empty = document.createElement('p')
-      empty.className = 'map-empty'
-      empty.textContent = 'No tickets'
-      section.appendChild(empty)
+      if (get(group, 'path') || size(get(group, 'tickets', [])) > 0) {
+        const empty = document.createElement('p')
+        empty.className = 'map-empty'
+        empty.textContent = 'No tickets'
+        section.appendChild(empty)
+      }
     } else {
       forEach(tickets, (ticket) => section.appendChild(makeTicketRow(ticket)))
     }
@@ -230,8 +313,14 @@ function resolveRelativeLink(href, baseRelPath) {
     else parts = concat(parts, part)
   })
   const resolved = join(parts, '/')
-  if (!resolved.startsWith('.scratch')) return null
-  return resolved
+  if (
+    resolved.startsWith('.scratch') ||
+    resolved.startsWith('docs/adr/') ||
+    resolved.startsWith('.out-of-scope/')
+  ) {
+    return resolved
+  }
+  return null
 }
 
 function attachPreviewLinkHandlers(baseRelPath) {
@@ -305,12 +394,70 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
 }
 
+function applyProjectData(data) {
+  currentMaps = get(data, 'maps', [])
+  currentDecisions = get(data, 'decisions', [])
+  currentAdrs = get(data, 'adrs', [])
+  currentOutOfScope = get(data, 'outOfScope', [])
+  currentProjectPath = get(data, 'projectPath', '')
+  projectInput.value = currentProjectPath
+  emptyMapsEl.hidden =
+    size(currentDecisions) > 0 || size(currentAdrs) > 0 || size(currentOutOfScope) > 0
+  renderMapList()
+}
+
+function firstPreviewPath() {
+  const group = remainingWorkOnly
+    ? find(currentDecisions, (effort) => !get(effort, 'finished', false))
+    : get(currentDecisions, 0)
+  const effortPath = group ? effortPreviewPath(group) : ''
+  if (effortPath) return effortPath
+  if (size(currentAdrs) > 0) return get(currentAdrs, [0, 'path'])
+  if (size(currentOutOfScope) > 0) return get(currentOutOfScope, [0, 'path'])
+  return ''
+}
+
+async function archiveEffort(slug) {
+  const confirmed = window.confirm(
+    `Move ${slug} to Archive? This moves the Effort, it does not delete it.`,
+  )
+  if (!confirmed) return
+  try {
+    showError('')
+    const data = await api('/api/archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug }),
+    })
+    applyProjectData(data)
+    const liveTicketPaths = concat(
+      ...map(currentDecisions, (group) => map(get(group, 'tickets', []), 'path')),
+    )
+    selectedTicketPaths = filter(selectedTicketPaths, (ticketPath) =>
+      includes(liveTicketPaths, ticketPath),
+    )
+    updateCopyControl()
+    const prefix = `.scratch/${slug}/`
+    if (
+      selectedRelPath &&
+      (selectedRelPath === `.scratch/${slug}` || selectedRelPath.startsWith(prefix))
+    ) {
+      showEmptyPreview()
+      renderMapList()
+    }
+  } catch (err) {
+    showError(err.message)
+  }
+}
+
 async function loadProject(path) {
   const requestId = ++projectRequestId
   ++fileRequestId
   loadBtn.disabled = true
   selectedTicketPaths = []
   copyStatusEl.textContent = ''
+  remainingWorkOnly = true
+  unresolvedFilterEl.checked = true
   updateCopyControl()
   showError('')
   try {
@@ -320,15 +467,11 @@ async function loadProject(path) {
       body: JSON.stringify({ path }),
     })
     if (requestId !== projectRequestId) return
-    currentMaps = get(data, 'maps', [])
-    currentDecisions = get(data, 'decisions', [])
-    currentProjectPath = get(data, 'projectPath', '')
-    projectInput.value = currentProjectPath
-    emptyMapsEl.hidden = size(currentMaps) > 0
-    renderMapList()
+    applyProjectData(data)
 
-    if (size(currentMaps) > 0) {
-      await selectFile(get(currentMaps, 0))
+    const previewPath = firstPreviewPath()
+    if (previewPath) {
+      await selectFile(previewPath)
       if (requestId !== projectRequestId) return
     } else {
       showEmptyPreview()
@@ -347,6 +490,11 @@ async function loadProject(path) {
     }
   }
 }
+
+unresolvedFilterEl.addEventListener('change', () => {
+  remainingWorkOnly = unresolvedFilterEl.checked
+  renderMapList()
+})
 
 loadBtn.addEventListener('click', () => {
   const path = projectInput.value.trim()

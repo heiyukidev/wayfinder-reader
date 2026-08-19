@@ -121,3 +121,49 @@ export function resolveScratchRelPath(projectPath, relPath) {
     relPath: canonicalScratchRel(scratchReal, realPath),
   }
 }
+
+export function isArchiveRelPath(relPath) {
+  if (!relPath || typeof relPath !== 'string') return false
+  const posix = relPath.replace(/\\/g, '/')
+  return posix === '.scratch/.archive' || posix.startsWith('.scratch/.archive/')
+}
+
+export function resolveProjectRelPath(projectPath, relPath) {
+  if (!relPath || typeof relPath !== 'string') {
+    return { ok: false, error: 'Path is required', status: 400 }
+  }
+
+  const posix = relPath.replace(/\\/g, '/')
+  if (posix.includes('..') || posix.startsWith('/') || posix === '') {
+    return { ok: false, error: 'Path traversal is not allowed', status: 403 }
+  }
+
+  let projectReal
+  try {
+    projectReal = fs.realpathSync(projectPath)
+  } catch {
+    return { ok: false, error: 'Cannot resolve project path', status: 403 }
+  }
+
+  const absPath = path.resolve(projectPath, posix)
+  if (!fs.existsSync(absPath)) {
+    return { ok: false, error: 'File not found', status: 404 }
+  }
+
+  let realPath
+  try {
+    realPath = fs.realpathSync(absPath)
+  } catch {
+    return { ok: false, error: 'Cannot resolve path', status: 403 }
+  }
+
+  if (!isUnderRoot(realPath, projectReal)) {
+    return { ok: false, error: 'Path escapes project sandbox', status: 403 }
+  }
+
+  return {
+    ok: true,
+    absPath: realPath,
+    relPath: path.relative(projectReal, realPath).replace(/\\/g, '/'),
+  }
+}

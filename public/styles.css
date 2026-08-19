@@ -293,8 +293,61 @@ body {
   font-size: var(--text-sm);
 }
 
-.map-list {
-  padding: var(--space-3);
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.filter-toggle input {
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.doc-section-title {
+  margin: 0;
+  padding: var(--space-2);
+  color: var(--color-ink-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.map-group-head {
+  display: flex;
+  flex-direction: column;
+}
+
+.archive-btn {
+  align-self: flex-start;
+  margin-top: var(--space-1);
+  padding: 1px 6px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.archive-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.archive-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .map-group {

@@ -3,12 +3,40 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
-import { validateProjectPath, resolveScratchRelPath } from './paths.js'
+import { validateProjectPath, resolveScratchRelPath, isArchiveRelPath, resolveProjectRelPath } from './paths.js'
 import { buildReadableTree } from './tree.js'
+import { archiveFinishedEffort } from './archive.js'
 import { readState, rememberProject } from './state.js'
+import concat from 'lodash/concat.js'
+import get from 'lodash/get.js'
+import includes from 'lodash/includes.js'
+import map from 'lodash/map.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
+
+function projectPayload(projectPath) {
+  const { tree, maps, decisions, adrs, outOfScope } = buildReadableTree(projectPath)
+  return { projectPath, tree, maps, decisions, adrs, outOfScope }
+}
+
+function resolvePreviewPath(projectPath, relPath) {
+  if (isArchiveRelPath(relPath)) {
+    return { ok: false, error: 'Archive is not readable', status: 403 }
+  }
+
+  const posix = typeof relPath === 'string' ? relPath.replace(/\\/g, '/') : ''
+  if (posix.startsWith('.scratch')) {
+    return resolveScratchRelPath(projectPath, relPath)
+  }
+
+  const { adrs, outOfScope } = buildReadableTree(projectPath)
+  const allowed = concat(map(adrs, 'path'), map(outOfScope, 'path'))
+  if (!includes(allowed, posix)) {
+    return { ok: false, error: 'Path must be under .scratch', status: 403 }
+  }
+  return resolveProjectRelPath(projectPath, posix)
+}
 
 export const app = new Hono()
 
@@ -25,8 +53,7 @@ app.post('/api/project', async (c) => {
 
   const projectPath = validation.projectPath
   rememberProject(projectPath)
-  const { tree, maps, decisions } = buildReadableTree(projectPath)
-  return c.json({ projectPath, tree, maps, decisions })
+  return c.json(projectPayload(projectPath))
 })
 
 app.get('/api/tree', (c) => {
@@ -40,8 +67,26 @@ app.get('/api/tree', (c) => {
     return c.json({ error: validation.error }, 404)
   }
 
-  const { tree, maps, decisions } = buildReadableTree(validation.projectPath)
-  return c.json({ projectPath: validation.projectPath, tree, maps, decisions })
+  return c.json(projectPayload(validation.projectPath))
+})
+
+app.post('/api/archive', async (c) => {
+  const { lastProjectPath } = readState()
+  if (!lastProjectPath) {
+    return c.json({ error: 'No project selected' }, 404)
+  }
+
+  const validation = validateProjectPath(lastProjectPath)
+  if (!validation.ok) {
+    return c.json({ error: validation.error }, 404)
+  }
+
+  const body = await c.req.json()
+  const result = archiveFinishedEffort(validation.projectPath, get(body, 'slug'))
+  if (!result.ok) {
+    return c.json({ error: result.error }, result.status)
+  }
+  return c.json(projectPayload(validation.projectPath))
 })
 
 app.get('/api/file', (c) => {
@@ -56,7 +101,7 @@ app.get('/api/file', (c) => {
   }
 
   const relPath = c.req.query('path')
-  const resolved = resolveScratchRelPath(validation.projectPath, relPath)
+  const resolved = resolvePreviewPath(validation.projectPath, relPath)
   if (!resolved.ok) {
     return c.json({ error: resolved.error }, resolved.status)
   }
