@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reader</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1 class="title">Reader</h1>
+      <div class="project-controls">
+        <label class="field-label" for="project-path">Project path</label>
+        <input
+          id="project-path"
+          type="text"
+          placeholder="/Users/…/project"
+          spellcheck="false"
+        />
+        <button id="load-btn" type="button" aria-label="Load">Load</button>
+        <label class="field-label" for="recents">Recents</label>
+        <select id="recents" aria-label="Recent projects">
+          <option value="">Choose…</option>
+        </select>
+      </div>
+    </header>
+
+    <div class="banners">
+      <div id="error" class="error" role="alert" hidden></div>
+      <div id="empty-maps" class="empty-maps" aria-live="polite" hidden>
+        This Project has no Maps (no <code>.scratch/*/map.md</code>).
+      </div>
+    </div>
+
+    <main class="layout">
+      <aside class="map-sidebar">
+        <div id="map-actions" class="map-actions" hidden>
+          <button id="copy-skip-btn" type="button">Copy Skip prompt</button>
+          <span id="copy-status" class="copy-status" role="status" aria-live="polite"></span>
+        </div>
+        <nav id="map-list" class="map-list" aria-label="Map list"></nav>
+      </aside>
+      <section class="preview-pane">
+        <div id="preview-caption" class="preview-caption"></div>
+        <div id="preview" class="preview preview-empty">
+          <p class="preview-placeholder">Paste a Project path and Load.</p>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
