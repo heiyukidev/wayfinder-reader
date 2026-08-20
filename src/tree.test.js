@@ -199,6 +199,13 @@ test('decisions lists only numbered Ticket files under Maps', () => {
     some(get(tree, 'children', []), (child) => child.name === 'spec-only'),
     true,
   )
+  assert.deepEqual(get(buildReadableTree(project), 'specOnly'), [
+    {
+      title: 'Standalone Spec',
+      path: '.scratch/spec-only/spec.md',
+      folder: 'spec-only',
+    },
+  ])
 })
 
 test('decisions computes blocker depth and Frontier from Ticket status', () => {
@@ -569,4 +576,156 @@ test('Spec with sibling Tickets including claimed-only is not takeable', () => {
   assert.equal(get(claimedGroup, 'spec.take'), null)
   assert.equal(get(frontierGroup, 'spec.take'), null)
   assert.deepEqual(get(frontierGroup, ['tickets', 0, 'take']), { commands: ['/wayfinder'] })
+})
+
+test('root CONTEXT.md is a language row with Glossary Terms; no map file required', () => {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-language-root-'))
+  fs.writeFileSync(
+    path.join(project, 'CONTEXT.md'),
+    [
+      '# Sealbox',
+      '',
+      'Intro with **bold** that is not a Term.',
+      '',
+      '## Glossary',
+      '',
+      '- **Customer** — a solo person who pays for an offsite copy.',
+      '  _Avoid_: consumer, team',
+      '- **Source** — Google Drive or Dropbox.',
+      '',
+      '## Product locks',
+      '',
+      '**Buyer**:',
+      'This heading must not parse as a Term.',
+      '',
+    ].join('\n'),
+  )
+
+  const { language, terms, specOnly, decisions } = buildReadableTree(project)
+
+  assert.deepEqual(language, [
+    { title: 'Sealbox', path: 'CONTEXT.md', contextName: 'Sealbox' },
+  ])
+  assert.deepEqual(terms, [
+    {
+      term: 'Customer',
+      definition: 'a solo person who pays for an offsite copy.',
+      avoid: 'consumer, team',
+      aliases: ['consumer', 'team'],
+      contextName: 'Sealbox',
+    },
+    {
+      term: 'Source',
+      definition: 'Google Drive or Dropbox.',
+      avoid: '',
+      aliases: [],
+      contextName: 'Sealbox',
+    },
+  ])
+  assert.deepEqual(specOnly, [])
+  assert.deepEqual(decisions, [])
+})
+
+test('CONTEXT-MAP.md lists the map and mapped CONTEXT files; illegal paths are omitted', () => {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-language-map-'))
+  const mobileDir = path.join(project, 'apps', 'mobile')
+  const frontDir = path.join(project, 'apps', 'front')
+  fs.mkdirSync(mobileDir, { recursive: true })
+  fs.mkdirSync(frontDir, { recursive: true })
+  fs.writeFileSync(
+    path.join(project, 'CONTEXT-MAP.md'),
+    [
+      '# Context Map',
+      '',
+      '- [Mobile](./apps/mobile/CONTEXT.md)',
+      '- [Notes](./apps/notes.md)',
+      '- [Escape](../outside/CONTEXT.md)',
+      '- [Missing](./apps/desktop/CONTEXT.md)',
+      '',
+      '| Context | Path |',
+      '| --- | --- |',
+      '| Frontend | `apps/front/CONTEXT.md` |',
+      '| Desktop | `apps/desktop/CONTEXT.md` |',
+      '',
+    ].join('\n'),
+  )
+  fs.writeFileSync(
+    path.join(mobileDir, 'CONTEXT.md'),
+    [
+      '# Mobile',
+      '',
+      '## Language',
+      '',
+      '**Assistant**:',
+      'Multi-turn conversational AI.',
+      '_Avoid_: Search',
+      '',
+    ].join('\n'),
+  )
+  fs.writeFileSync(
+    path.join(frontDir, 'CONTEXT.md'),
+    [
+      '# Frontend',
+      '',
+      '## Language',
+      '',
+      '**Assistant**:',
+      'Web conversational AI.',
+      '',
+    ].join('\n'),
+  )
+  fs.writeFileSync(path.join(project, 'CONTEXT.md'), '# Root leftover\n')
+
+  const { language, terms } = buildReadableTree(project)
+
+  assert.deepEqual(language, [
+    { title: 'Context Map', path: 'CONTEXT-MAP.md', contextName: 'Context Map' },
+    { title: 'Mobile', path: 'apps/mobile/CONTEXT.md', contextName: 'Mobile' },
+    { title: 'Frontend', path: 'apps/front/CONTEXT.md', contextName: 'Frontend' },
+    { title: 'Root leftover', path: 'CONTEXT.md', contextName: 'Root leftover' },
+  ])
+  assert.deepEqual(terms, [
+    {
+      term: 'Assistant',
+      definition: 'Multi-turn conversational AI.',
+      avoid: 'Search',
+      aliases: ['Search'],
+      contextName: 'Mobile',
+    },
+    {
+      term: 'Assistant',
+      definition: 'Web conversational AI.',
+      avoid: '',
+      aliases: [],
+      contextName: 'Frontend',
+    },
+  ])
+})
+
+test('language omits a mapped CONTEXT.md symlink that leaves the Project', () => {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-language-symlink-'))
+  const apps = path.join(project, 'apps')
+  fs.mkdirSync(apps)
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-outside-context-'))
+  fs.writeFileSync(path.join(outside, 'CONTEXT.md'), '# Leaked\n\n## Language\n\n**Secret**:\nnope\n')
+  fs.symlinkSync(path.join(outside, 'CONTEXT.md'), path.join(apps, 'CONTEXT.md'))
+  fs.writeFileSync(
+    path.join(project, 'CONTEXT-MAP.md'),
+    '# Map\n\n- [Leaked](./apps/CONTEXT.md)\n',
+  )
+
+  const { language, terms } = buildReadableTree(project)
+  assert.deepEqual(language, [
+    { title: 'Map', path: 'CONTEXT-MAP.md', contextName: 'Map' },
+  ])
+  assert.deepEqual(terms, [])
+})
+
+test('no language files yields empty language and terms', () => {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-no-language-'))
+  fs.mkdirSync(path.join(project, '.scratch'))
+  const { language, terms, specOnly } = buildReadableTree(project)
+  assert.deepEqual(language, [])
+  assert.deepEqual(terms, [])
+  assert.deepEqual(specOnly, [])
 })

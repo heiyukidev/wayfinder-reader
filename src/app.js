@@ -16,8 +16,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 
 function projectPayload(projectPath) {
-  const { tree, maps, decisions, adrs, outOfScope } = buildReadableTree(projectPath)
-  return { projectPath, tree, maps, decisions, adrs, outOfScope }
+  const { tree, maps, decisions, adrs, outOfScope, language, terms, specOnly } =
+    buildReadableTree(projectPath)
+  return { projectPath, tree, maps, decisions, adrs, outOfScope, language, terms, specOnly }
 }
 
 function resolvePreviewPath(projectPath, relPath) {
@@ -30,8 +31,8 @@ function resolvePreviewPath(projectPath, relPath) {
     return resolveScratchRelPath(projectPath, relPath)
   }
 
-  const { adrs, outOfScope } = buildReadableTree(projectPath)
-  const allowed = concat(map(adrs, 'path'), map(outOfScope, 'path'))
+  const { adrs, outOfScope, language } = buildReadableTree(projectPath)
+  const allowed = concat(map(adrs, 'path'), map(outOfScope, 'path'), map(language, 'path'))
   if (!includes(allowed, posix)) {
     return { ok: false, error: 'Path must be under .scratch', status: 403 }
   }

@@ -13,7 +13,7 @@ The **Readable tree** is the chosen Project’s **entire `.scratch/` tracker tre
 - Effort folders with `map.md` (Maps), including `issues/`, `research/`, `spec.md`, and `prototypes/` (any file type in the tree).
 - Sibling folders without `map.md` (spec-only, `/to-tickets`). Show them; do not call them Maps.
 
-Do not walk the rest of the Project (`node_modules`, `.git`, source, other hidden directories). Never follow `..` or a symlink out of the Project. Empty state is “no `.scratch/*/map.md`.”
+Do not walk the rest of the Project (`node_modules`, `.git`, source, other hidden directories) **in order to serve it**. Never follow `..` or a symlink out of the Project. [ADR 0010](0010-marker-walk-finds-sites.md) adds a marker hunt for **Sites** (`CONTEXT.md` and `.scratch/` directories) and repeats these named holes per Site. Empty Tickets is no live **Efforts** under any Site’s `.scratch/`; language-only Sites still list on Context.
 
 Rejected: maps-only (hides dnd-heiyuki specs and sealbox `first-slice`); all markdown / the whole Project (Always-on would serve source and secrets).
 

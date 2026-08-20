@@ -1,6 +1,6 @@
 # ADR 0001 — launchd user agent for Always-on
 
-Status: accepted
+Status: accepted. [ADR 0011](0011-static-public-origin-for-the-reader.md) adds a public origin; it does not retire Always-on ([ADR 0014](0014-always-on-stays-a-version.md)).
 
 ## Context
 

@@ -1,6 +1,6 @@
 # ADR 0003 — Hono static page for the Reader
 
-Status: accepted
+Status: accepted for **Always-on**. Superseded by [ADR 0012](0012-file-system-access-load.md) for the hosted origin. What Always-on serves is [ADR 0015](0015-always-on-hono-path-load-and-archive.md).
 
 ## Context
 

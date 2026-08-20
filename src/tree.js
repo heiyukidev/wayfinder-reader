@@ -12,12 +12,15 @@ import indexOf from 'lodash/indexOf.js'
 import keyBy from 'lodash/keyBy.js'
 import map from 'lodash/map.js'
 import max from 'lodash/max.js'
+import flatten from 'lodash/flatten.js'
 import omit from 'lodash/omit.js'
+import replace from 'lodash/replace.js'
 import size from 'lodash/size.js'
 import slice from 'lodash/slice.js'
 import split from 'lodash/split.js'
 import sortBy from 'lodash/sortBy.js'
 import take from 'lodash/take.js'
+import toArray from 'lodash/toArray.js'
 import toLower from 'lodash/toLower.js'
 import uniqBy from 'lodash/uniqBy.js'
 import trim from 'lodash/trim.js'
@@ -360,25 +363,199 @@ function listMdFiles(dirPath, projectReal) {
   )
 }
 
-function contextMapAdrDirs(projectPath, projectReal) {
-  const mapPath = path.join(projectPath, 'CONTEXT-MAP.md')
-  if (!fs.existsSync(mapPath)) return []
-  const hrefs = map(
-    [...readText(mapPath).matchAll(/\[[^\]]*\]\(([^)]+)\)/g)],
-    (match) => trim(get(split(get(match, 1, ''), /\s+/), 0, '')).replace(/['"]/g, ''),
+function cleanHref(raw) {
+  return replace(trim(get(split(trim(raw), /\s+/), 0, '')), /['"]/g, '')
+}
+
+function isContextMdHref(href) {
+  return Boolean(href) && !includes(href, '..') && path.basename(href) === 'CONTEXT.md'
+}
+
+function tableCellName(content, index) {
+  const lineStart = content.lastIndexOf('\n', index - 1) + 1
+  const lineEnd = content.indexOf('\n', index)
+  const line = content.slice(lineStart, lineEnd === -1 ? content.length : lineEnd)
+  if (!includes(line, '|')) return ''
+  const cells = filter(map(split(line, '|'), trim), Boolean)
+  if (every(cells, (cell) => /^:?-+:?$/.test(cell))) return ''
+  return get(cells, 0, '')
+}
+
+function mappedContextCandidates(mapContent) {
+  const matches = concat(
+    map(toArray(mapContent.matchAll(/\[([^\]]*)\]\(([^)]+)\)/g)), (match) => ({
+      index: match.index,
+      name: trim(get(match, 1, '')),
+      href: cleanHref(get(match, 2, '')),
+    })),
+    map(toArray(mapContent.matchAll(/`([^`]+)`/g)), (match) => ({
+      index: match.index,
+      name: tableCellName(mapContent, match.index),
+      href: trim(get(match, 1, '')),
+    })),
   )
-  return filter(
-    map(hrefs, (href) => {
-      if (!href || path.basename(href) !== 'CONTEXT.md' || includes(href, '..')) return null
-      const absPath = path.resolve(projectPath, href)
-      let realPath
-      try {
-        realPath = fs.realpathSync(absPath)
-      } catch {
-        return null
+  return filter(sortBy(matches, 'index'), (candidate) => isContextMdHref(get(candidate, 'href')))
+}
+
+function resolveProjectFile(projectPath, projectReal, absPath) {
+  let realPath
+  try {
+    realPath = fs.realpathSync(absPath)
+  } catch {
+    return null
+  }
+  if (!isUnderRoot(realPath, projectReal) || !fs.statSync(realPath).isFile()) return null
+  return {
+    realPath,
+    path: projectRelPosix(projectReal, realPath),
+    content: readText(realPath),
+  }
+}
+
+function resolveNamedRootFile(projectPath, projectReal, basename) {
+  const absPath = path.join(projectPath, basename)
+  if (!fs.existsSync(absPath)) return null
+  const file = resolveProjectFile(projectPath, projectReal, absPath)
+  if (!file || path.basename(get(file, 'realPath')) !== basename) return null
+  return file
+}
+
+function resolveHrefFile(projectPath, projectReal, href) {
+  if (!isContextMdHref(href)) return null
+  return resolveProjectFile(projectPath, projectReal, path.resolve(projectPath, href))
+}
+
+function firstParagraph(text) {
+  const paragraph = trim(get(split(trim(text), /\n\s*\n/), 0, ''))
+  return trim(replace(paragraph, /\s*\n\s*/g, ' '))
+}
+
+function parseSectionTerms(lines, contextName) {
+  const records = []
+  let current = null
+
+  const flush = () => {
+    if (!current) return
+    records.push({
+      term: get(current, 'term'),
+      definition: firstParagraph(get(current, 'raw', '')),
+      avoid: get(current, 'avoid', ''),
+      aliases: get(current, 'aliases', []),
+      contextName,
+    })
+    current = null
+  }
+
+  forEach(lines, (line) => {
+    const block = line.match(/^\*\*([^*]+)\*\*:\s*(.*)$/)
+    const list = line.match(/^-\s+\*\*([^*]+)\*\*\s+—\s*(.*)$/)
+    const avoid = line.match(/^\s*_Avoid_:\s*(.*)$/i)
+    if (block || list) {
+      flush()
+      const match = block || list
+      current = {
+        term: trim(get(match, 1, '')),
+        raw: trim(get(match, 2, '')),
+        avoid: '',
+        aliases: [],
       }
-      if (!isUnderRoot(realPath, projectReal) || !fs.statSync(realPath).isFile()) return null
-      return path.join(path.dirname(realPath), 'docs', 'adr')
+      return
+    }
+    if (current && avoid) {
+      const avoidText = trim(get(avoid, 1, ''))
+      current.avoid = avoidText
+      current.aliases = filter(map(split(avoidText, ','), trim), Boolean)
+      current.closed = true
+      return
+    }
+    if (current && !get(current, 'closed')) {
+      current.raw = get(current, 'raw') ? `${get(current, 'raw')}\n${line}` : line
+    }
+  })
+  flush()
+  return records
+}
+
+function parseTerms(content, contextName) {
+  const lines = split(content, '\n')
+  const sections = []
+  let collecting = false
+  let current = []
+
+  forEach(lines, (line) => {
+    if (/^##\s+(Language|Glossary)\s*$/i.test(line)) {
+      if (collecting) sections.push(current)
+      collecting = true
+      current = []
+      return
+    }
+    if (collecting && /^##\s+/.test(line)) {
+      sections.push(current)
+      collecting = false
+      current = []
+      return
+    }
+    if (collecting) current.push(line)
+  })
+  if (collecting) sections.push(current)
+
+  return flatten(map(sections, (section) => parseSectionTerms(section, contextName)))
+}
+
+function listLanguageDocs(projectPath) {
+  let projectReal
+  try {
+    projectReal = fs.realpathSync(projectPath)
+  } catch {
+    return { language: [], terms: [] }
+  }
+
+  const language = []
+  const seen = new Set()
+
+  const pushFile = (file, knownName) => {
+    if (!file || seen.has(get(file, 'path'))) return
+    seen.add(get(file, 'path'))
+    const content = get(file, 'content', '')
+    const title = knownName || readHeading(content) || path.basename(get(file, 'path'))
+    language.push({
+      title,
+      path: get(file, 'path'),
+      contextName: title,
+      content,
+    })
+  }
+
+  const mapFile = resolveNamedRootFile(projectPath, projectReal, 'CONTEXT-MAP.md')
+  if (mapFile) {
+    pushFile(mapFile, '')
+    forEach(mappedContextCandidates(get(mapFile, 'content', '')), (candidate) => {
+      pushFile(
+        resolveHrefFile(projectPath, projectReal, get(candidate, 'href')),
+        get(candidate, 'name', ''),
+      )
+    })
+  }
+
+  pushFile(resolveNamedRootFile(projectPath, projectReal, 'CONTEXT.md'), '')
+
+  return {
+    language: map(language, (row) => ({
+      title: get(row, 'title'),
+      path: get(row, 'path'),
+      contextName: get(row, 'contextName'),
+    })),
+    terms: flatten(map(language, (row) => parseTerms(get(row, 'content', ''), get(row, 'contextName')))),
+  }
+}
+
+function contextMapAdrDirs(projectPath, projectReal) {
+  const mapFile = resolveNamedRootFile(projectPath, projectReal, 'CONTEXT-MAP.md')
+  if (!mapFile) return []
+  return filter(
+    map(mappedContextCandidates(get(mapFile, 'content', '')), (candidate) => {
+      const file = resolveHrefFile(projectPath, projectReal, get(candidate, 'href'))
+      return file ? path.join(path.dirname(get(file, 'realPath')), 'docs', 'adr') : null
     }),
     Boolean,
   )
@@ -406,9 +583,28 @@ export function listProjectDocs(projectPath) {
   return { adrs, outOfScope }
 }
 
+function specOnlyList(decisions) {
+  return map(
+    filter(decisions, (group) => !get(group, 'path') && get(group, 'spec')),
+    (group) => ({
+      title: get(group, 'spec.title'),
+      path: get(group, 'spec.path'),
+      folder: get(group, 'folder'),
+    }),
+  )
+}
+
 export function buildReadableTree(projectPath) {
   const docs = listProjectDocs(projectPath)
-  const empty = { tree: null, maps: [], decisions: [], ...docs }
+  const languageDocs = listLanguageDocs(projectPath)
+  const empty = {
+    tree: null,
+    maps: [],
+    decisions: [],
+    specOnly: [],
+    ...docs,
+    ...languageDocs,
+  }
   const scratch = scratchRoot(projectPath)
   if (!fs.existsSync(scratch)) {
     return empty
@@ -423,7 +619,14 @@ export function buildReadableTree(projectPath) {
   const maps = discoverMaps(scratchReal, projectReal)
   const tree = buildNode(projectReal, scratchReal, scratchReal, '.scratch', '.scratch', 'dir')
   const decisions = buildDecisions(scratchReal, projectReal)
-  return { tree, maps, decisions, ...docs }
+  return {
+    tree,
+    maps,
+    decisions,
+    specOnly: specOnlyList(decisions),
+    ...docs,
+    ...languageDocs,
+  }
 }
 
 export function listMapsOnly(projectPath) {

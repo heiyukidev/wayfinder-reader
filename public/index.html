@@ -4,20 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Reader</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <header class="header">
       <h1 class="title">Reader</h1>
       <div class="project-controls">
-        <label class="field-label" for="project-path">Project path</label>
+        <label class="field-label" for="project-path" hidden>Project path</label>
         <input
           id="project-path"
           type="text"
           placeholder="/Users/…/project"
           spellcheck="false"
+          hidden
         />
         <button id="load-btn" type="button" aria-label="Load">Load</button>
+        <span id="project-name" class="project-name" hidden></span>
         <label class="field-label" for="recents">Recents</label>
         <select id="recents" aria-label="Recent projects">
           <option value="">Choose…</option>
@@ -28,7 +30,7 @@
     <div class="banners">
       <div id="error" class="error" role="alert" hidden></div>
       <div id="empty-maps" class="empty-maps" aria-live="polite" hidden>
-        This Project has no Efforts, ADRs, or Out-of-scope records.
+        This Project has no language documents, Efforts, ADRs, or Out-of-scope records.
       </div>
     </div>
 
@@ -42,19 +44,26 @@
           <span id="copy-status" class="copy-status" role="status" aria-live="polite"></span>
         </div>
         <label class="filter-toggle">
-          <input id="unresolved-filter" type="checkbox" checked />
-          Remaining work
+          <input
+            id="unresolved-filter"
+            class="filter-toggle-input"
+            type="checkbox"
+            checked
+            autocomplete="off"
+            aria-label="Unresolved filter"
+          />
+          <span class="filter-toggle-text">Remaining work</span>
         </label>
         <nav id="map-list" class="map-list" aria-label="Map list"></nav>
       </aside>
       <section class="preview-pane">
         <div id="preview-caption" class="preview-caption"></div>
         <div id="preview" class="preview preview-empty">
-          <p class="preview-placeholder">Paste a Project path and Load.</p>
+          <p class="preview-placeholder">Load a Project.</p>
         </div>
       </section>
     </main>
 
-    <script type="module" src="/app.js"></script>
+    <script type="module" src="./app.js"></script>
   </body>
 </html>
