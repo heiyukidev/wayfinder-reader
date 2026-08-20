@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prototype: How the hint card shows which Site supplied the Term</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <p class="proto-banner">
+      Throwaway. Three variants of how a <strong>Term hint</strong> card names the
+      supplying <strong>Site</strong> — including “show nothing extra.” Preview a
+      billing ADR (inherited root language) or root <code>CONTEXT.md</code> (local).
+      Pin a case, or hover. Arrow keys or the bar cycle variants. Not
+      <code>public/</code>.
+    </p>
+    <header class="header">
+      <h1 class="title">Reader</h1>
+      <div class="project-controls">
+        <button id="load-btn" type="button" aria-label="Load">Load</button>
+        <span id="project-name" class="project-name">wayfinder-reader</span>
+        <label class="field-label" for="recents">Recents</label>
+        <select id="recents" aria-label="Recent projects" disabled>
+          <option value="">wayfinder-reader</option>
+        </select>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="map-sidebar">
+        <div id="map-actions" class="map-actions">
+          <div class="map-copy-controls" role="group" aria-label="Copy prompts">
+            <button id="copy-skip-btn" type="button">Copy Skip prompt</button>
+          </div>
+          <span class="copy-status" role="status" aria-live="polite"></span>
+        </div>
+        <label class="filter-toggle">
+          <input
+            id="unresolved-filter"
+            class="filter-toggle-input"
+            type="checkbox"
+            checked
+            autocomplete="off"
+            aria-label="Unresolved filter"
+          />
+          <span class="filter-toggle-text">Remaining work</span>
+        </label>
+        <nav id="map-list" class="map-list" aria-label="Map list"></nav>
+      </aside>
+      <section class="preview-pane" id="preview-pane">
+        <div id="preview-caption" class="preview-caption">
+          <span id="caption-text"></span>
+        </div>
+        <div id="preview-body" class="preview-body">
+          <div id="preview" class="preview"></div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./hint-card-site.js"></script>
+  </body>
+</html>
