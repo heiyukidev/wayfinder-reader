@@ -6,6 +6,7 @@ import path from 'node:path'
 import map from 'lodash/map.js'
 import get from 'lodash/get.js'
 import find from 'lodash/find.js'
+import keyBy from 'lodash/keyBy.js'
 import some from 'lodash/some.js'
 import { buildReadableTree, discoverMaps } from './tree.js'
 
@@ -723,6 +724,52 @@ test('language omits a mapped CONTEXT.md symlink that leaves the Project', () =>
     { title: 'Map', path: 'CONTEXT-MAP.md', contextName: 'Map' },
   ])
   assert.deepEqual(terms, [])
+})
+
+test('Status done is resolved for Finished, Frontier, and blockers', () => {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-status-done-'))
+  const scratch = path.join(project, '.scratch')
+  const alias = path.join(scratch, 'alias')
+  const closed = path.join(scratch, 'closed')
+  const other = path.join(scratch, 'other')
+
+  fs.mkdirSync(path.join(alias, 'issues'), { recursive: true })
+  fs.mkdirSync(path.join(closed, 'issues'), { recursive: true })
+  fs.mkdirSync(path.join(other, 'issues'), { recursive: true })
+  fs.writeFileSync(path.join(alias, 'map.md'), '# Alias Map')
+  fs.writeFileSync(path.join(closed, 'map.md'), '# Closed Map')
+  fs.writeFileSync(path.join(other, 'map.md'), '# Other Map')
+  fs.writeFileSync(
+    path.join(alias, 'issues', '01-groundwork.md'),
+    '# Groundwork\n\nType: task\nStatus: Done\n',
+  )
+  fs.writeFileSync(
+    path.join(alias, 'issues', '02-unblocked.md'),
+    '# Unblocked\n\nType: task\nStatus:\nBlocked by: 01\n',
+  )
+  fs.writeFileSync(
+    path.join(closed, 'issues', '01-shipped.md'),
+    '# Shipped\n\nType: task\nStatus: done\n',
+  )
+  fs.writeFileSync(
+    path.join(other, 'issues', '01-complete.md'),
+    '# Complete\n\nType: task\nStatus: complete\n',
+  )
+
+  const { decisions } = buildReadableTree(project)
+  const byFolder = keyBy(decisions, 'folder')
+
+  assert.equal(get(byFolder, ['alias', 'tickets', 0, 'status']), 'done')
+  assert.equal(get(byFolder, ['alias', 'tickets', 0, 'resolved']), true)
+  assert.equal(get(byFolder, ['alias', 'tickets', 0, 'frontier']), false)
+  assert.equal(get(byFolder, ['alias', 'tickets', 0, 'take']), null)
+  assert.equal(get(byFolder, ['alias', 'tickets', 1, 'frontier']), true)
+  assert.deepEqual(get(byFolder, ['alias', 'tickets', 1, 'take']), { commands: ['/wayfinder'] })
+  assert.equal(get(byFolder, ['alias', 'finished']), false)
+  assert.equal(get(byFolder, ['closed', 'finished']), true)
+  assert.equal(get(byFolder, ['closed', 'tickets', 0, 'resolved']), true)
+  assert.equal(get(byFolder, ['other', 'tickets', 0, 'resolved']), false)
+  assert.equal(get(byFolder, ['other', 'finished']), false)
 })
 
 test('no language files yields empty language and terms', () => {

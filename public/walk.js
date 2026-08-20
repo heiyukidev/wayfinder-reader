@@ -226,7 +226,7 @@ function parseTicket(effortRel, filename, content) {
   const status = readHeader(headerLines, 'Status').toLowerCase()
   const blockerValue = readHeader(headerLines, 'Blocked by')
   const blockers = map(blockerValue.match(/\d+/g) ?? [], Number)
-  const resolved = status === 'resolved'
+  const resolved = includes(['resolved', 'done'], status)
   const claimed = status === 'claimed'
   return {
     number: Number(get(filename.match(/^(\d+)-/), 1, 0)),

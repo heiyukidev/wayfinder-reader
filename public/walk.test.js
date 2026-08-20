@@ -143,6 +143,18 @@ test('Map list uses titles, take commands, and Finished from Ticket status', asy
           fileHandle('01-done.md', '# Done Ticket\n\nType: task\nStatus: resolved\n'),
         ]),
       ]),
+      dirHandle('finished-done', [
+        fileHandle('map.md', '# Alias Map\n'),
+        dirHandle('issues', [
+          fileHandle('01-shipped.md', '# Shipped\n\nType: task\nStatus: Done\n'),
+        ]),
+      ]),
+      dirHandle('not-complete', [
+        fileHandle('map.md', '# Other Map\n'),
+        dirHandle('issues', [
+          fileHandle('01-complete.md', '# Complete\n\nType: task\nStatus: complete\n'),
+        ]),
+      ]),
     ]),
   ])
 
@@ -157,6 +169,38 @@ test('Map list uses titles, take commands, and Finished from Ticket status', asy
     commands: ['/to-tickets'],
   })
   assert.equal(get(byFolder, ['finished', 'finished']), true)
+  assert.equal(get(byFolder, ['finished-done', 'finished']), true)
+  assert.equal(get(byFolder, ['finished-done', 'tickets', 0, 'resolved']), true)
+  assert.equal(get(byFolder, ['finished-done', 'tickets', 0, 'take']), null)
+  assert.equal(get(byFolder, ['not-complete', 'finished']), false)
+  assert.equal(get(byFolder, ['not-complete', 'tickets', 0, 'resolved']), false)
+})
+
+test('Status done unblocks Frontier dependents', async () => {
+  const root = dirHandle('project', [
+    fileHandle('CONTEXT.md', '# Project\n'),
+    dirHandle('.scratch', [
+      dirHandle('alias', [
+        fileHandle('map.md', '# Alias Map\n'),
+        dirHandle('issues', [
+          fileHandle('01-groundwork.md', '# Groundwork\n\nType: task\nStatus: Done\n'),
+          fileHandle(
+            '02-unblocked.md',
+            '# Unblocked\n\nType: task\nStatus:\nBlocked by: 01\n',
+          ),
+        ]),
+      ]),
+    ]),
+  ])
+
+  const walked = await walkProject(root)
+  const group = get(keyBy(walked.decisions, 'folder'), 'alias')
+  assert.equal(get(group, ['tickets', 0, 'resolved']), true)
+  assert.equal(get(group, ['tickets', 0, 'frontier']), false)
+  assert.equal(get(group, ['tickets', 0, 'take']), null)
+  assert.equal(get(group, ['tickets', 1, 'frontier']), true)
+  assert.deepEqual(get(group, ['tickets', 1, 'take']), { commands: ['/wayfinder'] })
+  assert.equal(get(group, 'finished'), false)
 })
 
 test('CONTEXT-MAP titles and orders nested Sites; unlisted Site still appears', async () => {

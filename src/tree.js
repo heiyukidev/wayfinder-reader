@@ -194,7 +194,7 @@ function parseTicket(effortName, issuesPath, entry) {
   const status = readHeader(headerLines, 'Status').toLowerCase()
   const blockerValue = readHeader(headerLines, 'Blocked by')
   const blockers = map(blockerValue.match(/\d+/g) ?? [], Number)
-  const resolved = status === 'resolved'
+  const resolved = includes(['resolved', 'done'], status)
   const claimed = status === 'claimed'
 
   return {
