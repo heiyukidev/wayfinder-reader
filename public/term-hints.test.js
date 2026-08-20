@@ -13,8 +13,13 @@ function terms(...names) {
   }))
 }
 
-function phrases(matches) {
-  return map(matches, (row) => ({ phrase: get(row, 'phrase'), index: get(row, 'index') }))
+function spans(matches) {
+  return map(matches, (row) => ({
+    text: get(row, 'text'),
+    index: get(row, 'index'),
+    phrase: get(row, 'phrase'),
+    kind: get(row, 'model.kind'),
+  }))
 }
 
 test('a longer glossary phrase wins over a shorter prefix when extra spaces sit between the words', () => {
@@ -22,7 +27,9 @@ test('a longer glossary phrase wins over a shorter prefix when extra spaces sit 
     'Join the affiliate  program today.',
     terms('Affiliate', 'Affiliate program'),
   )
-  assert.deepEqual(phrases(matches), [{ phrase: 'affiliate program', index: 9 }])
+  assert.deepEqual(spans(matches), [
+    { text: 'affiliate  program', index: 9, phrase: 'affiliate program', kind: 'definition' },
+  ])
 })
 
 test('a longer glossary phrase wins when a tab sits between the words', () => {
@@ -30,7 +37,9 @@ test('a longer glossary phrase wins when a tab sits between the words', () => {
     'Join the affiliate\tprogram today.',
     terms('Affiliate', 'Affiliate program'),
   )
-  assert.deepEqual(phrases(matches), [{ phrase: 'affiliate program', index: 9 }])
+  assert.deepEqual(spans(matches), [
+    { text: 'affiliate\tprogram', index: 9, phrase: 'affiliate program', kind: 'definition' },
+  ])
 })
 
 test('a longer glossary phrase wins when a newline sits between the words', () => {
@@ -38,7 +47,19 @@ test('a longer glossary phrase wins when a newline sits between the words', () =
     'Join the affiliate\nprogram today.',
     terms('Affiliate', 'Affiliate program'),
   )
-  assert.deepEqual(phrases(matches), [{ phrase: 'affiliate program', index: 9 }])
+  assert.deepEqual(spans(matches), [
+    { text: 'affiliate\nprogram', index: 9, phrase: 'affiliate program', kind: 'definition' },
+  ])
+})
+
+test('a longer glossary phrase wins over a shorter inner word', () => {
+  const matches = matchTermHints(
+    'Join the affiliate program today.',
+    terms('Program', 'Affiliate program'),
+  )
+  assert.deepEqual(spans(matches), [
+    { text: 'affiliate program', index: 9, phrase: 'affiliate program', kind: 'definition' },
+  ])
 })
 
 test('a shorter Term still matches where it stands alone', () => {
@@ -46,7 +67,9 @@ test('a shorter Term still matches where it stands alone', () => {
     'Join as an affiliate today.',
     terms('Affiliate', 'Affiliate program'),
   )
-  assert.deepEqual(phrases(matches), [{ phrase: 'affiliate', index: 11 }])
+  assert.deepEqual(spans(matches), [
+    { text: 'affiliate', index: 11, phrase: 'affiliate', kind: 'definition' },
+  ])
 })
 
 test('a shorter Term after a longer match still matches outside the claimed span', () => {
@@ -54,9 +77,9 @@ test('a shorter Term after a longer match still matches outside the claimed span
     'join the affiliate program as an affiliate',
     terms('Affiliate', 'Affiliate program'),
   )
-  assert.deepEqual(phrases(matches), [
-    { phrase: 'affiliate program', index: 9 },
-    { phrase: 'affiliate', index: 33 },
+  assert.deepEqual(spans(matches), [
+    { text: 'affiliate program', index: 9, phrase: 'affiliate program', kind: 'definition' },
+    { text: 'affiliate', index: 33, phrase: 'affiliate', kind: 'definition' },
   ])
 })
 
@@ -65,15 +88,15 @@ test('adjacent short Terms that are not a glossary phrase stay two matches', () 
     'Join the affiliate program today.',
     terms('Affiliate', 'Program'),
   )
-  assert.deepEqual(phrases(matches), [
-    { phrase: 'affiliate', index: 9 },
-    { phrase: 'program', index: 19 },
+  assert.deepEqual(spans(matches), [
+    { text: 'affiliate', index: 9, phrase: 'affiliate', kind: 'definition' },
+    { text: 'program', index: 19, phrase: 'program', kind: 'definition' },
   ])
 })
 
 test('whole-word matching does not hint inside a longer token', () => {
   const matches = matchTermHints('affiliates and affiliation', terms('Affiliate'))
-  assert.deepEqual(phrases(matches), [])
+  assert.deepEqual(spans(matches), [])
 })
 
 test('matching is case-insensitive', () => {
@@ -81,12 +104,16 @@ test('matching is case-insensitive', () => {
     'Join the Affiliate Program today.',
     terms('Affiliate program'),
   )
-  assert.deepEqual(phrases(matches), [{ phrase: 'affiliate program', index: 9 }])
+  assert.deepEqual(spans(matches), [
+    { text: 'Affiliate Program', index: 9, phrase: 'affiliate program', kind: 'definition' },
+  ])
 })
 
 test('leftmost longest wins when phrases overlap without nesting', () => {
   const matches = matchTermHints('New York City', terms('New York', 'York City'))
-  assert.deepEqual(phrases(matches), [{ phrase: 'new york', index: 0 }])
+  assert.deepEqual(spans(matches), [
+    { text: 'New York', index: 0, phrase: 'new york', kind: 'definition' },
+  ])
 })
 
 test('empty Terms yield no matches', () => {
@@ -98,9 +125,21 @@ test('a longer alias claims the span over a shorter Term inside it', () => {
     { term: 'Affiliate', definition: 'short', aliases: [], contextName: 'Test' },
     { term: 'Partner', definition: 'long', aliases: ['affiliate program'], contextName: 'Test' },
   ])
-  assert.deepEqual(phrases(matches), [{ phrase: 'affiliate program', index: 9 }])
-  assert.equal(get(matches, [0, 'model', 'kind']), 'prefer')
+  assert.deepEqual(spans(matches), [
+    { text: 'affiliate program', index: 9, phrase: 'affiliate program', kind: 'prefer' },
+  ])
   assert.deepEqual(get(matches, [0, 'model', 'terms']), ['Partner'])
+})
+
+test('a longer Term claims the span over a shorter alias inside it', () => {
+  const matches = matchTermHints('Join the affiliate program today.', [
+    { term: 'Affiliate program', definition: 'long', aliases: [], contextName: 'Test' },
+    { term: 'Partner', definition: 'other', aliases: ['affiliate'], contextName: 'Test' },
+  ])
+  assert.deepEqual(spans(matches), [
+    { text: 'affiliate program', index: 9, phrase: 'affiliate program', kind: 'definition' },
+  ])
+  assert.equal(get(matches, [0, 'model', 'term']), 'Affiliate program')
 })
 
 test('punctuation after a longer phrase leaves the match intact', () => {
@@ -108,7 +147,9 @@ test('punctuation after a longer phrase leaves the match intact', () => {
     'Join the affiliate program.',
     terms('Affiliate', 'Affiliate program'),
   )
-  assert.deepEqual(phrases(matches), [{ phrase: 'affiliate program', index: 9 }])
+  assert.deepEqual(spans(matches), [
+    { text: 'affiliate program', index: 9, phrase: 'affiliate program', kind: 'definition' },
+  ])
 })
 
 test('a hyphenated form that is not the glossary spelling misses the longer phrase', () => {
@@ -116,5 +157,5 @@ test('a hyphenated form that is not the glossary spelling misses the longer phra
     'Join the affiliate-program today.',
     terms('Affiliate program'),
   )
-  assert.deepEqual(phrases(matches), [])
+  assert.deepEqual(spans(matches), [])
 })
