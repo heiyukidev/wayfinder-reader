@@ -4,7 +4,14 @@
 
 **Blocked by:** 01 Longer Term hint phrase claims the span
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Glossary **Term hint** states that when two glossary phrases overlap, the longer one is the hint
-- [ ] ADR 0006 matching lock includes longest-span (and same-paragraph whitespace) in place; no second Term-hint ADR
+- [x] Glossary **Term hint** states that when two glossary phrases overlap, the longer one is the hint
+- [x] ADR 0006 matching lock includes longest-span (and same-paragraph whitespace) in place; no second Term-hint ADR
+
+## Answer
+
+Longest-phrase matching is recorded on **Term hint** and in the existing matching lock. No new ADR.
+
+- Glossary: **Term hint** in [`CONTEXT.md`](../../../CONTEXT.md) — “When two glossary phrases overlap, the longer one is the hint.”
+- Matching lock: [ADR 0006](../../../docs/adr/0006-term-hints-from-language-files.md) — whole-word, case-insensitive, skip `code` / `pre` / URLs, plus longest-span and same-paragraph whitespace between words of a multi-word Term or alias.
