@@ -1,10 +1,11 @@
 import get from './vendor/lodash-es/get.js'
 import filter from './vendor/lodash-es/filter.js'
-import find from './vendor/lodash-es/find.js'
 import forEach from './vendor/lodash-es/forEach.js'
 import map from './vendor/lodash-es/map.js'
 import size from './vendor/lodash-es/size.js'
 import join from './vendor/lodash-es/join.js'
+import split from './vendor/lodash-es/split.js'
+import some from './vendor/lodash-es/some.js'
 import toLower from './vendor/lodash-es/toLower.js'
 import trim from './vendor/lodash-es/trim.js'
 import uniq from './vendor/lodash-es/uniq.js'
@@ -75,12 +76,60 @@ function compileMatchers(terms) {
   return orderBy(
     map(toPairs(byPhrase), ([phrase, hits]) => ({
       phrase,
-      pattern: `(?<![A-Za-z0-9_])${escapeRegExp(phrase)}(?![A-Za-z0-9_])`,
+      pattern: phrasePattern(phrase),
       model: hintModel(hits),
     })),
     [(item) => size(get(item, 'phrase'))],
     ['desc'],
   )
+}
+
+function phrasePattern(phrase) {
+  const words = filter(split(trim(phrase), /\s+/), Boolean)
+  if (size(words) === 0) return ''
+  return `(?<![A-Za-z0-9_])${join(map(words, escapeRegExp), '\\s+')}(?![A-Za-z0-9_])`
+}
+
+export function matchTermHints(text, terms) {
+  if (!size(terms) || !text) return []
+  const matchers = filter(compileMatchers(terms), (matcher) => get(matcher, 'pattern'))
+  if (size(matchers) === 0) return []
+
+  const candidates = []
+  forEach(matchers, (matcher) => {
+    const regex = new RegExp(get(matcher, 'pattern'), 'gi')
+    let match = regex.exec(text)
+    while (match) {
+      const matchedText = get(match, 0, '')
+      if (size(matchedText)) {
+        candidates.push({
+          text: matchedText,
+          index: match.index,
+          end: match.index + size(matchedText),
+          phrase: get(matcher, 'phrase'),
+          model: get(matcher, 'model'),
+        })
+      } else {
+        regex.lastIndex += 1
+      }
+      match = regex.exec(text)
+    }
+  })
+
+  const ordered = orderBy(candidates, ['index', (row) => -size(get(row, 'text'))])
+  const claimed = []
+  forEach(ordered, (candidate) => {
+    if (some(claimed, (taken) => get(candidate, 'index') < get(taken, 'end') && get(candidate, 'end') > get(taken, 'index'))) {
+      return
+    }
+    claimed.push(candidate)
+  })
+  return map(claimed, (row) => ({
+    text: get(row, 'text'),
+    index: get(row, 'index'),
+    phrase: get(row, 'phrase'),
+    model: get(row, 'model'),
+  }))
 }
 
 function bindCardLinks(root) {
@@ -194,12 +243,12 @@ function placeHintCard(anchor) {
   card.style.top = `${top}px`
 }
 
-function makeHintEl(matchedText, matcher) {
+function makeHintEl(hit) {
   const el = document.createElement('span')
   el.className = 'term-hint'
-  el.textContent = matchedText
+  el.textContent = get(hit, 'text')
   el.tabIndex = 0
-  hintModels.set(el, get(matcher, 'model'))
+  hintModels.set(el, get(hit, 'model'))
   el.addEventListener('mouseenter', () => placeHintCard(el))
   el.addEventListener('mouseleave', scheduleHideCard)
   el.addEventListener('focus', () => placeHintCard(el))
@@ -229,26 +278,18 @@ function collectTextNodes(root) {
   return nodes
 }
 
-function wrapNode(node, matchers, regex) {
+function wrapNode(node, terms) {
   const text = node.nodeValue
-  regex.lastIndex = 0
+  const matches = matchTermHints(text, terms)
+  if (size(matches) === 0) return
   const frag = document.createDocumentFragment()
   let last = 0
-  let wrapped = 0
-  let match = regex.exec(text)
-  while (match) {
-    const matchedText = get(match, 0, '')
-    const matcher = find(matchers, (item) => phraseKey(get(item, 'phrase')) === phraseKey(matchedText))
-    if (matcher) {
-      if (match.index > last) frag.append(text.slice(last, match.index))
-      frag.appendChild(makeHintEl(matchedText, matcher))
-      wrapped += 1
-      last = match.index + size(matchedText)
-    }
-    if (!size(matchedText)) regex.lastIndex += 1
-    match = regex.exec(text)
-  }
-  if (wrapped === 0) return
+  forEach(matches, (hit) => {
+    const index = get(hit, 'index')
+    if (index > last) frag.append(text.slice(last, index))
+    frag.appendChild(makeHintEl(hit))
+    last = index + size(get(hit, 'text'))
+  })
   if (last < size(text)) frag.append(text.slice(last))
   node.parentNode.replaceChild(frag, node)
 }
@@ -256,11 +297,8 @@ function wrapNode(node, matchers, regex) {
 export function applyTermHints(root, terms) {
   hideTermHintCard()
   if (size(terms) === 0) return
-  const matchers = compileMatchers(terms)
-  if (size(matchers) === 0) return
-  const regex = new RegExp(join(map(matchers, 'pattern'), '|'), 'gi')
   forEach(collectTextNodes(root), (node) => {
     if (!node.parentNode) return
-    wrapNode(node, matchers, regex)
+    wrapNode(node, terms)
   })
 }
