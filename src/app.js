@@ -16,9 +16,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 
 function projectPayload(projectPath) {
-  const { tree, maps, decisions, adrs, outOfScope, language, terms, specOnly } =
+  const { tree, maps, decisions, adrs, outOfScope, language, terms, specOnly, sites } =
     buildReadableTree(projectPath)
-  return { projectPath, tree, maps, decisions, adrs, outOfScope, language, terms, specOnly }
+  return { projectPath, tree, maps, decisions, adrs, outOfScope, language, terms, specOnly, sites }
 }
 
 function resolvePreviewPath(projectPath, relPath) {

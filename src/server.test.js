@@ -502,6 +502,7 @@ test('GET /api/file serves language paths and still refuses package.json and .en
     { title: 'Glossary', path: 'CONTEXT.md', contextName: 'Glossary' },
   ])
   assert.equal(get(body, ['terms', 0, 'term']), 'Reader')
+  assert.equal(get(body, ['terms', 0, 'rel']), '.')
 
   const fileRes = await app.request('/api/file?path=CONTEXT.md')
   assert.equal(fileRes.status, 200)

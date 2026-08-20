@@ -193,6 +193,25 @@ test('CONTEXT-MAP titles and orders nested Sites; unlisted Site still appears', 
   assert.equal(get(nav, 'path'), 'apps/web/.scratch/nav/map.md')
 })
 
+test('terms carry the owning Site rel', async () => {
+  const root = dirHandle('repo', [
+    fileHandle('CONTEXT.md', '# Root\n\n## Language\n\n**Site**:\nA directory.\n'),
+    dirHandle('apps', [
+      dirHandle('billing', [
+        fileHandle('CONTEXT.md', '# Billing\n\n## Language\n\n**Invoice**:\nA bill.\n'),
+      ]),
+    ]),
+  ])
+  const walked = await walkProject(root)
+  assert.deepEqual(
+    map(walked.terms, (row) => ({ term: get(row, 'term'), rel: get(row, 'rel') })),
+    [
+      { term: 'Site', rel: '.' },
+      { term: 'Invoice', rel: 'apps/billing' },
+    ],
+  )
+})
+
 test('terms parse from Glossary; preview paths stay in the Readable tree', () => {
   const terms = parseTerms(
     [

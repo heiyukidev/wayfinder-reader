@@ -17,6 +17,7 @@ import omit from 'lodash/omit.js'
 import replace from 'lodash/replace.js'
 import size from 'lodash/size.js'
 import slice from 'lodash/slice.js'
+import some from 'lodash/some.js'
 import split from 'lodash/split.js'
 import sortBy from 'lodash/sortBy.js'
 import take from 'lodash/take.js'
@@ -39,6 +40,51 @@ function isHiddenDir(name) {
 
 function shouldSkipDir(name) {
   return SKIP_DIRS.has(name) || isHiddenDir(name)
+}
+
+function posixJoin(parent, name) {
+  if (!parent || parent === '.') return name
+  return `${parent}/${name}`
+}
+
+function looksLikeEffort(names) {
+  return includes(names, 'map.md') || includes(names, 'spec.md') || includes(names, 'issues')
+}
+
+function isSiteFromNames(names) {
+  if (includes(names, '.scratch')) return true
+  return includes(names, 'CONTEXT.md') && !looksLikeEffort(names)
+}
+
+function languagePathRel(filePath) {
+  if (filePath === 'CONTEXT.md' || filePath === 'CONTEXT-MAP.md') return '.'
+  if (filePath.endsWith('/CONTEXT.md')) return filePath.slice(0, -'/CONTEXT.md'.length)
+  if (filePath.endsWith('/CONTEXT-MAP.md')) return filePath.slice(0, -'/CONTEXT-MAP.md'.length)
+  return '.'
+}
+
+function huntSites(projectPath) {
+  const sites = []
+  const visit = (absPath, rel) => {
+    const entries = readDirEntries(absPath)
+    const names = map(entries, 'name')
+    if (isSiteFromNames(names)) {
+      const contextFile = path.join(absPath, 'CONTEXT.md')
+      let title = rel || path.basename(projectPath)
+      if (fs.existsSync(contextFile)) {
+        title = readHeading(readText(contextFile)) || title
+      }
+      sites.push({ rel: rel || '.', title })
+    }
+    forEach(entries, (entry) => {
+      if (!entry.isDirectory()) return
+      if (entry.name === '.scratch') return
+      if (shouldSkipDir(entry.name)) return
+      visit(path.join(absPath, entry.name), posixJoin(rel, entry.name))
+    })
+  }
+  visit(projectPath, '')
+  return sites
 }
 
 function readDirEntries(dirPath) {
@@ -545,7 +591,13 @@ function listLanguageDocs(projectPath) {
       path: get(row, 'path'),
       contextName: get(row, 'contextName'),
     })),
-    terms: flatten(map(language, (row) => parseTerms(get(row, 'content', ''), get(row, 'contextName')))),
+    terms: flatten(
+      map(language, (row) =>
+        map(parseTerms(get(row, 'content', ''), get(row, 'contextName')), (record) =>
+          assign({}, record, { rel: languagePathRel(get(row, 'path')) }),
+        ),
+      ),
+    ),
   }
 }
 
@@ -597,11 +649,18 @@ function specOnlyList(decisions) {
 export function buildReadableTree(projectPath) {
   const docs = listProjectDocs(projectPath)
   const languageDocs = listLanguageDocs(projectPath)
+  let sites = []
+  try {
+    if (fs.existsSync(projectPath)) sites = huntSites(projectPath)
+  } catch {
+    sites = []
+  }
   const empty = {
     tree: null,
     maps: [],
     decisions: [],
     specOnly: [],
+    sites,
     ...docs,
     ...languageDocs,
   }
@@ -624,6 +683,7 @@ export function buildReadableTree(projectPath) {
     maps,
     decisions,
     specOnly: specOnlyList(decisions),
+    sites,
     ...docs,
     ...languageDocs,
   }

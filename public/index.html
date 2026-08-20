@@ -57,9 +57,21 @@
         <nav id="map-list" class="map-list" aria-label="Map list"></nav>
       </aside>
       <section class="preview-pane">
-        <div id="preview-caption" class="preview-caption"></div>
-        <div id="preview" class="preview preview-empty">
-          <p class="preview-placeholder">Load a Project.</p>
+        <div id="preview-caption" class="preview-caption">
+          <span id="caption-text"></span>
+          <div id="caption-actions" class="caption-actions"></div>
+        </div>
+        <div id="preview-body" class="preview-body">
+          <textarea
+            id="paste-composer"
+            class="paste-composer"
+            hidden
+            aria-label="Paste markdown"
+            placeholder="Paste GFM here."
+          ></textarea>
+          <div id="preview" class="preview preview-empty">
+            <p class="preview-placeholder">Load a Project.</p>
+          </div>
         </div>
       </section>
     </main>

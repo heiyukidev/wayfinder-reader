@@ -508,6 +508,17 @@ async function readSite(site) {
   return { rel, title, markers, language, adrs, outOfScope, efforts }
 }
 
+function languageRel(path, sites) {
+  const owner = find(sites, (site) =>
+    some(get(site, 'language', []), (doc) => get(doc, 'path') === path),
+  )
+  if (owner) return get(owner, 'rel')
+  if (path === 'CONTEXT-MAP.md' || path === 'CONTEXT.md') return '.'
+  if (path.endsWith('/CONTEXT.md')) return path.slice(0, -'/CONTEXT.md'.length)
+  if (path.endsWith('/CONTEXT-MAP.md')) return path.slice(0, -'/CONTEXT-MAP.md'.length)
+  return '.'
+}
+
 export async function walkProject(rootHandle) {
   const found = await huntSites(rootHandle)
   const rootChildren = await collectChildren(rootHandle)
@@ -552,7 +563,12 @@ export async function walkProject(rootHandle) {
   const outOfScope = flatten(map(sites, 'outOfScope'))
   const maps = filter(map(decisions, 'path'), Boolean)
   const terms = flatten(
-    map(uniqueLanguage, (row) => parseTerms(get(row, 'content', ''), get(row, 'contextName'))),
+    map(uniqueLanguage, (row) => {
+      const rel = languageRel(get(row, 'path'), sites)
+      return map(parseTerms(get(row, 'content', ''), get(row, 'contextName')), (record) =>
+        assign({}, record, { rel }),
+      )
+    }),
   )
 
   return {

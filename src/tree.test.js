@@ -613,6 +613,7 @@ test('root CONTEXT.md is a language row with Glossary Terms; no map file require
       avoid: 'consumer, team',
       aliases: ['consumer', 'team'],
       contextName: 'Sealbox',
+      rel: '.',
     },
     {
       term: 'Source',
@@ -620,6 +621,7 @@ test('root CONTEXT.md is a language row with Glossary Terms; no map file require
       avoid: '',
       aliases: [],
       contextName: 'Sealbox',
+      rel: '.',
     },
   ])
   assert.deepEqual(specOnly, [])
@@ -691,6 +693,7 @@ test('CONTEXT-MAP.md lists the map and mapped CONTEXT files; illegal paths are o
       avoid: 'Search',
       aliases: ['Search'],
       contextName: 'Mobile',
+      rel: 'apps/mobile',
     },
     {
       term: 'Assistant',
@@ -698,6 +701,7 @@ test('CONTEXT-MAP.md lists the map and mapped CONTEXT files; illegal paths are o
       avoid: '',
       aliases: [],
       contextName: 'Frontend',
+      rel: 'apps/front',
     },
   ])
 })

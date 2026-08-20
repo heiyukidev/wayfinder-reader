@@ -1,5 +1,6 @@
 import get from './vendor/lodash-es/get.js'
 import filter from './vendor/lodash-es/filter.js'
+import find from './vendor/lodash-es/find.js'
 import forEach from './vendor/lodash-es/forEach.js'
 import map from './vendor/lodash-es/map.js'
 import size from './vendor/lodash-es/size.js'
@@ -14,6 +15,8 @@ import toPairs from './vendor/lodash-es/toPairs.js'
 import orderBy from './vendor/lodash-es/orderBy.js'
 import escapeRegExp from './vendor/lodash-es/escapeRegExp.js'
 import toArray from './vendor/lodash-es/toArray.js'
+import assign from './vendor/lodash-es/assign.js'
+import flatten from './vendor/lodash-es/flatten.js'
 import { marked } from './vendor/marked/lib/marked.esm.js'
 
 marked.setOptions({ gfm: true })
@@ -24,6 +27,75 @@ let hideCardTimer = 0
 
 function phraseKey(value) {
   return toLower(trim(value))
+}
+
+function relDepth(rel) {
+  if (!rel || rel === '.') return 0
+  return size(rel)
+}
+
+function siteContains(rel, previewPath) {
+  if (rel === '.') return true
+  return previewPath === rel || previewPath.startsWith(`${rel}/`)
+}
+
+function siteLineage(sites, previewPath) {
+  return orderBy(
+    filter(sites, (site) => siteContains(get(site, 'rel'), previewPath)),
+    [(site) => relDepth(get(site, 'rel'))],
+    ['desc'],
+  )
+}
+
+function recordPhrases(record) {
+  return filter(
+    uniq(map([get(record, 'term'), ...get(record, 'aliases', [])], phraseKey)),
+    Boolean,
+  )
+}
+
+function recordDefinesPhrase(record, phrase) {
+  return some(recordPhrases(record), (item) => item === phrase)
+}
+
+export function overlayTermsForPreview(terms, sites, previewPath = '') {
+  if (!size(terms) || !size(sites)) {
+    return { terms: [], owningRel: '' }
+  }
+  const lineage = siteLineage(sites, previewPath)
+  const owningRel = get(lineage, [0, 'rel'], '')
+  if (!owningRel) return { terms: [], owningRel: '' }
+
+  const lineageRels = map(lineage, 'rel')
+  const inLineage = filter(terms, (record) => some(lineageRels, (rel) => rel === get(record, 'rel')))
+  const closestRelFor = (phrase) =>
+    find(lineageRels, (rel) =>
+      some(inLineage, (record) => get(record, 'rel') === rel && recordDefinesPhrase(record, phrase)),
+    )
+
+  const overlay = flatten(
+    map(inLineage, (record) => {
+      const termPhrase = phraseKey(get(record, 'term'))
+      const keepTerm = termPhrase && closestRelFor(termPhrase) === get(record, 'rel')
+      const keepAliases = filter(
+        get(record, 'aliases', []),
+        (alias) => closestRelFor(phraseKey(alias)) === get(record, 'rel'),
+      )
+      if (!keepTerm && size(keepAliases) === 0) return []
+      const site = find(sites, (row) => get(row, 'rel') === get(record, 'rel'))
+      return [
+        assign({}, record, {
+          aliases: keepAliases,
+          siteTitle: get(site, 'title', ''),
+        }),
+      ]
+    }),
+  )
+
+  return {
+    terms: orderBy(overlay, [(row) => relDepth(get(row, 'rel'))], ['desc']),
+    owningRel,
+  }
 }
 
 function hintModel(hits) {
@@ -39,11 +111,15 @@ function hintModel(hits) {
         term: get(records, [0, 'term']),
         definition: get(records, [0, 'definition'], ''),
         contextName: get(records, [0, 'contextName'], ''),
+        rel: get(records, [0, 'rel'], ''),
+        siteTitle: get(records, [0, 'siteTitle'], ''),
       }
     }
     return {
       kind: 'collision',
       term: get(records, [0, 'term']),
+      rel: get(records, [0, 'rel'], ''),
+      siteTitle: get(records, [0, 'siteTitle'], ''),
       rows: map(records, (record) => ({
         contextName: get(record, 'contextName', ''),
         definition: get(record, 'definition', ''),
@@ -55,6 +131,8 @@ function hintModel(hits) {
   return {
     kind: 'prefer',
     terms: uniq(map(aliasHits, (hit) => get(hit, 'record.term'))),
+    rel: get(aliasHits, [0, 'record.rel'], ''),
+    siteTitle: get(aliasHits, [0, 'record.siteTitle'], ''),
   }
 }
 
@@ -155,6 +233,14 @@ function hintKicker(model) {
   return get(model, 'term', 'Term')
 }
 
+function appendInheritedFooter(card, model) {
+  if (!get(model, 'inherited')) return
+  const foot = document.createElement('div')
+  foot.className = 'term-hint-inherited'
+  foot.textContent = `Inherited from ${get(model, 'siteTitle')}`
+  card.appendChild(foot)
+}
+
 function fillHintCard(card, model) {
   card.replaceChildren()
   const kicker = document.createElement('span')
@@ -172,30 +258,29 @@ function fillHintCard(card, model) {
         : `Prefer ${join(map(names, (name) => `**${name}**`), ' or ')}.`
     fillMarkdown(wrap, source)
     card.appendChild(wrap)
-    return
-  }
-  if (kind === 'definition') {
+  } else if (kind === 'definition') {
     const wrap = document.createElement('div')
     wrap.className = 'term-hint-def'
     fillMarkdown(wrap, get(model, 'definition', ''))
     card.appendChild(wrap)
-    return
+  } else {
+    const list = document.createElement('ul')
+    list.className = 'term-hint-collision'
+    forEach(get(model, 'rows', []), (row) => {
+      const item = document.createElement('li')
+      const context = document.createElement('span')
+      context.className = 'term-hint-context'
+      context.textContent = get(row, 'contextName', '')
+      const def = document.createElement('div')
+      def.className = 'term-hint-def'
+      fillMarkdown(def, get(row, 'definition', ''))
+      item.appendChild(context)
+      item.appendChild(def)
+      list.appendChild(item)
+    })
+    card.appendChild(list)
   }
-  const list = document.createElement('ul')
-  list.className = 'term-hint-collision'
-  forEach(get(model, 'rows', []), (row) => {
-    const item = document.createElement('li')
-    const context = document.createElement('span')
-    context.className = 'term-hint-context'
-    context.textContent = get(row, 'contextName', '')
-    const def = document.createElement('div')
-    def.className = 'term-hint-def'
-    fillMarkdown(def, get(row, 'definition', ''))
-    item.appendChild(context)
-    item.appendChild(def)
-    list.appendChild(item)
-  })
-  card.appendChild(list)
+  appendInheritedFooter(card, model)
 }
 
 function ensureHintCard() {
@@ -243,12 +328,19 @@ function placeHintCard(anchor) {
   card.style.top = `${top}px`
 }
 
-function makeHintEl(hit) {
+function makeHintEl(hit, owningRel) {
   const el = document.createElement('span')
   el.className = 'term-hint'
   el.textContent = get(hit, 'text')
   el.tabIndex = 0
-  hintModels.set(el, get(hit, 'model'))
+  const model = get(hit, 'model')
+  const rel = get(model, 'rel', '')
+  hintModels.set(
+    el,
+    assign({}, model, {
+      inherited: Boolean(rel) && rel !== owningRel,
+    }),
+  )
   el.addEventListener('mouseenter', () => placeHintCard(el))
   el.addEventListener('mouseleave', scheduleHideCard)
   el.addEventListener('focus', () => placeHintCard(el))
@@ -278,7 +370,7 @@ function collectTextNodes(root) {
   return nodes
 }
 
-function wrapNode(node, terms) {
+function wrapNode(node, terms, owningRel) {
   const text = node.nodeValue
   const matches = matchTermHints(text, terms)
   if (size(matches) === 0) return
@@ -287,18 +379,18 @@ function wrapNode(node, terms) {
   forEach(matches, (hit) => {
     const index = get(hit, 'index')
     if (index > last) frag.append(text.slice(last, index))
-    frag.appendChild(makeHintEl(hit))
+    frag.appendChild(makeHintEl(hit, owningRel))
     last = index + size(get(hit, 'text'))
   })
   if (last < size(text)) frag.append(text.slice(last))
   node.parentNode.replaceChild(frag, node)
 }
 
-export function applyTermHints(root, terms) {
+export function applyTermHints(root, terms, owningRel = '') {
   hideTermHintCard()
   if (size(terms) === 0) return
   forEach(collectTextNodes(root), (node) => {
     if (!node.parentNode) return
-    wrapNode(node, terms)
+    wrapNode(node, terms, owningRel)
   })
 }

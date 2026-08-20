@@ -15,7 +15,17 @@ import toArray from './vendor/lodash-es/toArray.js'
 import truncate from './vendor/lodash-es/truncate.js'
 import uniq from './vendor/lodash-es/uniq.js'
 import { marked } from './vendor/marked/lib/marked.esm.js'
-import { applyTermHints, hideTermHintCard } from './term-hints.js'
+import { applyTermHints, hideTermHintCard, overlayTermsForPreview } from './term-hints.js'
+import {
+  bindPastePreviewLinks,
+  createPasteSession,
+  leavePaste,
+  markProjectLoaded,
+  pasteCaptionText,
+  setPasteBuffer,
+  setPasteCompose,
+  togglePaste,
+} from './paste-preview.js'
 import {
   isReadablePreviewPath,
   readPreviewFile,
@@ -44,7 +54,9 @@ const copySkipBtn = document.getElementById('copy-skip-btn')
 const copyTakeBtn = document.getElementById('copy-take-btn')
 const copyStatusEl = document.getElementById('copy-status')
 const previewEl = document.getElementById('preview')
-const previewCaption = document.getElementById('preview-caption')
+const captionText = document.getElementById('caption-text')
+const captionActions = document.getElementById('caption-actions')
+const pasteComposer = document.getElementById('paste-composer')
 
 const HOSTED_EMPTY_PREVIEW_HTML = '<p class="preview-placeholder">Load a Project.</p>'
 const ALWAYS_ON_EMPTY_PREVIEW_HTML =
@@ -64,6 +76,7 @@ let currentAdrs = []
 let currentOutOfScope = []
 let currentLanguage = []
 let currentTerms = []
+let currentSites = []
 let currentProjectName = ''
 let currentProjectPath = ''
 let currentRootHandle = null
@@ -72,6 +85,7 @@ let remainingWorkOnly = true
 let mapListTab = 'tickets'
 let selectedTicketPaths = []
 let selectedRelPath = null
+let pasteSession = createPasteSession()
 let fileRequestId = 0
 let projectRequestId = 0
 
@@ -142,20 +156,115 @@ function showAlwaysOnChrome() {
 
 function showEmptyPreview() {
   selectedRelPath = null
+  pasteSession = leavePaste(pasteSession)
   hideTermHintCard()
-  previewCaption.textContent = ''
+  hidePasteComposer()
   previewEl.classList.remove('is-loading', 'is-swapping')
   previewEl.classList.add('preview-empty')
   previewEl.innerHTML = emptyPreviewHtml()
+  paintCaption()
   updateCopyControl()
 }
 
-function showLoadingPreview(relPath) {
+function showLoadingPreview() {
   hideTermHintCard()
-  previewCaption.textContent = relPath
+  hidePasteComposer()
+  paintCaption()
   previewEl.classList.remove('preview-empty', 'is-swapping')
   previewEl.classList.add('is-loading')
   previewEl.innerHTML = '<p class="preview-loading-text">Loading…</p>'
+}
+
+function applyPreviewTermHints(previewPath) {
+  const overlay = overlayTermsForPreview(currentTerms, currentSites, previewPath || '')
+  applyTermHints(previewEl, get(overlay, 'terms'), get(overlay, 'owningRel'))
+}
+
+function hidePasteComposer() {
+  pasteComposer.hidden = true
+  previewEl.hidden = false
+}
+
+function makeModeButton(label, composeValue) {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'caption-mode-btn'
+  const isOn = get(pasteSession, 'compose') === composeValue
+  if (isOn) button.classList.add('is-on')
+  button.setAttribute('aria-pressed', isOn ? 'true' : 'false')
+  button.textContent = label
+  button.addEventListener('click', () => {
+    pasteSession = setPasteCompose(pasteSession, composeValue)
+    paintCaption()
+    renderPastePane()
+  })
+  return button
+}
+
+function makePasteButton() {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'paste-btn'
+  button.textContent = 'Paste'
+  button.disabled = !get(pasteSession, 'loaded')
+  button.setAttribute('aria-pressed', get(pasteSession, 'showing') ? 'true' : 'false')
+  if (!get(pasteSession, 'loaded')) button.title = 'Load a Project first'
+  button.addEventListener('click', onPasteClick)
+  return button
+}
+
+function paintCaption() {
+  captionText.textContent = pasteCaptionText(pasteSession, selectedRelPath || '')
+  captionActions.replaceChildren()
+  if (get(pasteSession, 'showing')) {
+    captionActions.appendChild(makeModeButton('Compose', true))
+    captionActions.appendChild(makeModeButton('Show', false))
+  }
+  captionActions.appendChild(makePasteButton())
+}
+
+function renderPastePane() {
+  hideTermHintCard()
+  if (get(pasteSession, 'compose')) {
+    previewEl.hidden = true
+    pasteComposer.hidden = false
+    pasteComposer.value = get(pasteSession, 'buffer', '')
+    pasteComposer.focus()
+    return
+  }
+  hidePasteComposer()
+  previewEl.classList.remove('preview-empty', 'is-loading', 'is-swapping')
+  const source = get(pasteSession, 'buffer', '')
+  if (!source) {
+    previewEl.classList.add('preview-empty')
+    previewEl.innerHTML = '<p class="preview-placeholder">Paste markdown.</p>'
+    return
+  }
+  previewEl.innerHTML = marked.parse(source)
+  bindPastePreviewLinks(previewEl)
+  applyPreviewTermHints(selectedRelPath || '')
+}
+
+function onPasteClick() {
+  if (!get(pasteSession, 'loaded')) return
+  pasteSession = togglePaste(pasteSession)
+  if (get(pasteSession, 'showing')) {
+    ++fileRequestId
+    showError('')
+    paintCaption()
+    renderPastePane()
+    return
+  }
+  if (selectedRelPath) {
+    selectFile(selectedRelPath)
+    return
+  }
+  hideTermHintCard()
+  hidePasteComposer()
+  previewEl.classList.remove('is-loading', 'is-swapping')
+  previewEl.classList.add('preview-empty')
+  previewEl.innerHTML = emptyPreviewHtml()
+  paintCaption()
 }
 
 function effortPreviewPath(group) {
@@ -548,7 +657,7 @@ function renderPreviewContent(data, relPath) {
   if (data.contentType === 'text/markdown' || relPath.endsWith('.md')) {
     previewEl.innerHTML = marked.parse(data.content || '')
     attachPreviewLinkHandlers(relPath)
-    applyTermHints(previewEl, currentTerms)
+    applyPreviewTermHints(relPath)
   } else if (data.content) {
     previewEl.innerHTML = `<pre><code>${escapeHtml(data.content)}</code></pre>`
   } else {
@@ -559,9 +668,10 @@ function renderPreviewContent(data, relPath) {
 async function selectFile(relPath) {
   const requestId = ++fileRequestId
   selectedRelPath = relPath
+  pasteSession = leavePaste(pasteSession)
   renderMapList()
   updateCopyControl()
-  showLoadingPreview(relPath)
+  showLoadingPreview()
 
   try {
     if (!alwaysOn && !currentRootHandle) throw new Error('No Project loaded')
@@ -601,6 +711,10 @@ function applyProjectData(data, handle) {
   currentOutOfScope = get(data, 'outOfScope', [])
   currentLanguage = get(data, 'language', [])
   currentTerms = get(data, 'terms', [])
+  currentSites = map(get(data, 'sites', []), (site) => ({
+    rel: get(site, 'rel'),
+    title: get(site, 'title'),
+  }))
   if (alwaysOn) {
     currentProjectPath = get(data, 'projectPath', '')
     currentProjectName =
@@ -669,6 +783,7 @@ async function archiveEffort(slug) {
 }
 
 async function applyLoadedProject(data) {
+  pasteSession = markProjectLoaded()
   resetUnresolvedFilter()
   applyProjectData(data)
   const previewPath = firstPreviewPath()
@@ -751,6 +866,7 @@ async function loadFromHandle(handle) {
   try {
     const data = await walkProject(handle)
     if (requestId !== projectRequestId) return
+    pasteSession = markProjectLoaded()
     resetUnresolvedFilter()
     applyProjectData(data, handle)
 
@@ -850,6 +966,10 @@ recentsSelect.addEventListener('change', async () => {
   const recents = await listRecents()
   const row = get(recents, Number(value))
   if (row) await restoreRecent(row)
+})
+
+pasteComposer.addEventListener('input', () => {
+  pasteSession = setPasteBuffer(pasteSession, pasteComposer.value)
 })
 
 copySkipBtn.addEventListener('click', async () => {
