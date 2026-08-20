@@ -74,7 +74,7 @@ test('static assets are path-relative so a project-site origin still loads them'
   const css = fs.readFileSync(STYLES_CSS, 'utf8')
   const app = fs.readFileSync(path.join(PUBLIC, 'app.js'), 'utf8')
 
-  assert.match(html, /href=["']\.\/styles\.css["']/)
+  assert.match(html, /href=["']\.\/styles\.css(?:\?[^"']*)?["']/)
   assert.match(html, /src=["']\.\/app\.js["']/)
   assert.doesNotMatch(html, /href=["']\/styles\.css["']/)
   assert.doesNotMatch(html, /src=["']\/app\.js["']/)

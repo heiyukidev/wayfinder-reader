@@ -358,13 +358,38 @@ test('Paste with no selection in a nested-only Project yields no overlay', () =>
   assert.deepEqual(overlayFuel(result), { owningRel: '', terms: [] })
 })
 
-test('empty Sites or empty Terms yield no overlay', () => {
+test('empty Terms yield no overlay', () => {
   assert.deepEqual(overlayFuel(overlayTermsForPreview([], THREE_SITES, 'CONTEXT.md')), {
     owningRel: '',
     terms: [],
   })
+})
+
+test('a payload that omits Sites still overlays from term rels', () => {
+  const records = [
+    overlayRecord('Invoice', 'apps/billing', { contextName: 'Billing' }),
+    overlayRecord('Site', '.', { contextName: 'Reader' }),
+    overlayRecord('Shipping rate', 'apps/shipping', { contextName: 'Shipping' }),
+  ]
   assert.deepEqual(
-    overlayFuel(overlayTermsForPreview([overlayRecord('Site', '.')], [], 'CONTEXT.md')),
-    { owningRel: '', terms: [] },
+    overlayFuel(overlayTermsForPreview(records, [], 'apps/billing/docs/adr/0001.md')),
+    {
+      owningRel: 'apps/billing',
+      terms: [
+        { term: 'Invoice', rel: 'apps/billing', contextName: 'Billing', aliases: [] },
+        { term: 'Site', rel: '.', contextName: 'Reader', aliases: [] },
+      ],
+    },
   )
+})
+
+test('stale Terms without rel overlay as the root Site', () => {
+  const records = [
+    { term: 'Reader', definition: 'Reader def', aliases: [], contextName: 'CONTEXT' },
+    { term: 'Map list', definition: 'Map list def', aliases: [], contextName: 'CONTEXT' },
+  ]
+  const result = overlayTermsForPreview(records, [], '.scratch/dark-look/map.md')
+  assert.equal(get(result, 'owningRel'), '.')
+  assert.deepEqual(map(get(result, 'terms'), 'term'), ['Reader', 'Map list'])
+  assert.deepEqual(map(get(result, 'terms'), 'rel'), ['.', '.'])
 })

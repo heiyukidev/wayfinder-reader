@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node src/server.js",
     "test": "node --test",
-    "prototype:handles": "node .scratch/hosted-reader/prototypes/serve.mjs"
+    "prototype:handles": "node .scratch/hosted-reader/prototypes/serve.mjs",
+    "prototype:paste-preview": "node .scratch/paste-preview/prototypes/serve.mjs",
+    "prototype:hint-card-site": "node .scratch/site-lineage-term-hints/prototypes/serve.mjs",
+    "prototype:dark-look": "node .scratch/dark-look/prototypes/serve.mjs"
   },
   "dependencies": {
     "@hono/node-server": "2.1.1",

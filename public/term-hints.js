@@ -58,33 +58,52 @@ function recordDefinesPhrase(record, phrase) {
   return some(recordPhrases(record), (item) => item === phrase)
 }
 
+function recordRel(record) {
+  return get(record, 'rel') || '.'
+}
+
+function sitesFromTerms(terms) {
+  return uniqBy(
+    map(terms, (record) => ({
+      rel: recordRel(record),
+      title: get(record, 'siteTitle') || get(record, 'contextName') || '',
+    })),
+    'rel',
+  )
+}
+
 export function overlayTermsForPreview(terms, sites, previewPath = '') {
-  if (!size(terms) || !size(sites)) {
+  if (!size(terms)) {
     return { terms: [], owningRel: '' }
   }
-  const lineage = siteLineage(sites, previewPath)
+  const resolvedSites = size(sites) ? sites : sitesFromTerms(terms)
+  const lineage = siteLineage(resolvedSites, previewPath)
   const owningRel = get(lineage, [0, 'rel'], '')
   if (!owningRel) return { terms: [], owningRel: '' }
 
   const lineageRels = map(lineage, 'rel')
-  const inLineage = filter(terms, (record) => some(lineageRels, (rel) => rel === get(record, 'rel')))
+  const inLineage = filter(terms, (record) =>
+    some(lineageRels, (rel) => rel === recordRel(record)),
+  )
   const closestRelFor = (phrase) =>
     find(lineageRels, (rel) =>
-      some(inLineage, (record) => get(record, 'rel') === rel && recordDefinesPhrase(record, phrase)),
+      some(inLineage, (record) => recordRel(record) === rel && recordDefinesPhrase(record, phrase)),
     )
 
   const overlay = flatten(
     map(inLineage, (record) => {
+      const rel = recordRel(record)
       const termPhrase = phraseKey(get(record, 'term'))
-      const keepTerm = termPhrase && closestRelFor(termPhrase) === get(record, 'rel')
+      const keepTerm = termPhrase && closestRelFor(termPhrase) === rel
       const keepAliases = filter(
         get(record, 'aliases', []),
-        (alias) => closestRelFor(phraseKey(alias)) === get(record, 'rel'),
+        (alias) => closestRelFor(phraseKey(alias)) === rel,
       )
       if (!keepTerm && size(keepAliases) === 0) return []
-      const site = find(sites, (row) => get(row, 'rel') === get(record, 'rel'))
+      const site = find(resolvedSites, (row) => get(row, 'rel') === rel)
       return [
         assign({}, record, {
+          rel,
           aliases: keepAliases,
           siteTitle: get(site, 'title', ''),
         }),
@@ -93,7 +112,7 @@ export function overlayTermsForPreview(terms, sites, previewPath = '') {
   )
 
   return {
-    terms: orderBy(overlay, [(row) => relDepth(get(row, 'rel'))], ['desc']),
+    terms: orderBy(overlay, [(row) => relDepth(recordRel(row))], ['desc']),
     owningRel,
   }
 }

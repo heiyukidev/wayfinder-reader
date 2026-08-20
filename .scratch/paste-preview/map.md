@@ -22,10 +22,12 @@ After a **Project** is Loaded, Khaled can paste markdown (a copied agent chat or
 
 ## Decisions so far
 
+- [How a Paste preview occupies the preview pane](issues/01-how-a-paste-preview-occupies-the-preview-pane.md): **A** — Paste in the caption; exclusive file-or-paste pane; Compose / Show; caption `Paste preview`. Prototype: [prototypes/occupy-preview.js](prototypes/occupy-preview.js).
+- [Ship Paste preview in the Reader](issues/02-ship-paste-preview-in-the-reader.md): Caption toggle in `public/`; same GFM + Term hints; memory buffer; Load clears; Map list click leaves and Paste restores.
+- [Visual polish of Paste preview](issues/03-visual-polish-of-paste-preview.md): **A** — Paste matches Skip/Take; Compose/Show are caption text; composer is paper, not a white mono card. Prototype: [prototypes/visual-polish.js](prototypes/visual-polish.js).
+
 ## Not yet specified
 
-- A keyboard shortcut once the control exists and has a place in chrome.
-- Visual polish of the composer vs the rendered paste (graduates after the stub is in `public/`).
 
 ## Out of scope
 

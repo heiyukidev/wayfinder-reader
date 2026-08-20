@@ -503,6 +503,9 @@ test('GET /api/file serves language paths and still refuses package.json and .en
   ])
   assert.equal(get(body, ['terms', 0, 'term']), 'Reader')
   assert.equal(get(body, ['terms', 0, 'rel']), '.')
+  assert.deepEqual(map(get(body, 'sites'), (row) => ({ rel: get(row, 'rel'), title: get(row, 'title') })), [
+    { rel: '.', title: 'Glossary' },
+  ])
 
   const fileRes = await app.request('/api/file?path=CONTEXT.md')
   assert.equal(fileRes.status, 200)

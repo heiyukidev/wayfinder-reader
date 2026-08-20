@@ -3,10 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Reader</title>
-    <link rel="stylesheet" href="./styles.css?v=dark3" />
+    <title>Prototype: What does the dark reading desk look like</title>
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <!--
+      THESIS: The signed-off reading desk at night — same fonts, spacing, and chrome roles, recast in a dark register. Not a new world.
+      OWN-WORLD: Warm dark paper, stone Map list, navy Load. Source Serif 4 GFM, Source Sans 3 chrome.
+      STORY: Khaled reads maps at a dark desk. One Look, always dark, no selector.
+      FIRST VIEWPORT: Header with one filled Load, stone Map list, paper GFM column.
+      FORM: Dark translation of Visual polish of the Reader. Tight variants only for navy / hairline / muted ink contrast.
+      FINISH: Throwaway. Sign-off on this ticket; do not ship into public/.
+    -->
+    <p class="proto-banner">
+      Throwaway. One dark translation of the signed-off desk — not a second world.
+      <strong>A</strong> inverts the tokens (Load fill stays navy). On-dark links, outlines, marks, and focus use a lighter navy ink for contrast.
+      <strong>B</strong> lifts Load so the filled action holds.
+      <strong>C</strong> strengthens hairlines and muted ink. Scene buttons cover composer, hint slip, error, empty, Always-on.
+    </p>
     <header class="header">
       <h1 class="title">Reader</h1>
       <div class="project-controls">
@@ -16,19 +30,22 @@
           type="text"
           placeholder="/Users/…/project"
           spellcheck="false"
+          value="/Users/khaledromdhane/Desktop/js/wayfinder-reader"
           hidden
         />
         <button id="load-btn" type="button" aria-label="Load">Load</button>
-        <span id="project-name" class="project-name" hidden></span>
+        <span id="project-name" class="project-name">wayfinder-reader</span>
         <label class="field-label" for="recents">Recents</label>
         <select id="recents" aria-label="Recent projects">
           <option value="">Choose…</option>
+          <option value="wayfinder-reader" selected>wayfinder-reader</option>
+          <option value="sealbox">sealbox</option>
         </select>
       </div>
     </header>
 
     <div class="banners">
-      <div id="error" class="error" role="alert" hidden></div>
+      <div id="error" class="error" role="alert" hidden>Could not read this Project. Check the path and try Load again.</div>
       <div id="empty-maps" class="empty-maps" aria-live="polite" hidden>
         This Project has no language documents, Efforts, ADRs, or Out-of-scope records.
       </div>
@@ -36,10 +53,10 @@
 
     <main class="layout">
       <aside class="map-sidebar">
-        <div id="map-actions" class="map-actions" hidden>
+        <div id="map-actions" class="map-actions">
           <div class="map-copy-controls" role="group" aria-label="Copy prompts">
             <button id="copy-skip-btn" type="button">Copy Skip prompt</button>
-            <button id="copy-take-btn" type="button" hidden>Copy Take prompt</button>
+            <button id="copy-take-btn" type="button">Copy Take prompt</button>
           </div>
           <span id="copy-status" class="copy-status" role="status" aria-live="polite"></span>
         </div>
@@ -61,21 +78,10 @@
           <span id="caption-text"></span>
           <div id="caption-actions" class="caption-actions"></div>
         </div>
-        <div id="preview-body" class="preview-body">
-          <textarea
-            id="paste-composer"
-            class="paste-composer"
-            hidden
-            aria-label="Paste markdown"
-            placeholder="Paste GFM here."
-          ></textarea>
-          <div id="preview" class="preview preview-empty">
-            <p class="preview-placeholder">Load a Project.</p>
-          </div>
-        </div>
+        <div id="preview-body" class="preview-body"></div>
       </section>
     </main>
 
-    <script type="module" src="./app.js"></script>
+    <script type="module" src="./dark-desk.js"></script>
   </body>
 </html>
