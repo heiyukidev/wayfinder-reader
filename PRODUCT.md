@@ -14,7 +14,7 @@ The primary user is a Wayfinder operator: someone running Wayfinder on a local *
 
 The **Reader** shows Wayfinder maps that live on the visitor’s disk. Success is understanding remaining work, a **Map**, or a **Term** without leaving the Reader.
 
-Two versions share one page: the hosted origin (static HTML/JS at a public HTTPS URL; Chrome or Edge; Load via a **Directory handle**) and **Always-on** (Hono at `127.0.0.1:5420`; Load via a **Project path**; **Archive**). The hosted Reader does not edit, claim, resolve, or Archive. It never writes the Project.
+Two versions share one page: the hosted origin (static HTML/JS at a public HTTPS URL; Chrome, Edge, Firefox, or Brave; Load via a **Directory handle** or a **Directory snapshot**; Safari out) and **Always-on** (Hono at `127.0.0.1:5420`; Load via a **Project path**; **Archive**). The hosted Reader does not edit, claim, resolve, or Archive. It never writes the Project.
 
 ## Positioning
 
@@ -22,7 +22,7 @@ This is a Wayfinder map viewer, not a generic markdown or filesystem browser. It
 
 ## Operating Context
 
-Wayfinder work happens in agent sessions against a Project on disk (`/grill`, `/implement`, `/to-spec`, `/to-tickets`). The operator keeps the Reader beside that work. Hosted Load uses the File System Access API (Chrome or Edge). Always-on is a `launchd` user agent plus a bookmark at `http://127.0.0.1:5420` on macOS. `npm start` is development only and is neither version.
+Wayfinder work happens in agent sessions against a Project on disk (`/grill`, `/implement`, `/to-spec`, `/to-tickets`). The operator keeps the Reader beside that work. Hosted Load is a **Directory handle** when File System Access exists, else a **Directory snapshot**. Always-on is a `launchd` user agent plus a bookmark at `http://127.0.0.1:5420` on macOS. `npm start` is development only and is neither version.
 
 ## Capabilities and Constraints
 
@@ -30,7 +30,7 @@ Confirmed:
 
 - One page for hosted and Always-on.
 - Sidebar is the **Map list** (Context tab and Tickets tab); pane is GFM preview with **Term hints**, or a **Paste preview**.
-- Hosted Load identity is a **Directory handle**; Always-on Load identity is a **Project path**.
+- Hosted Load identity is a **Directory handle** or a **Directory snapshot**; Always-on Load identity is a **Project path**. Safari is not a hosted browser.
 - Hosted never writes the Project. Always-on may **Archive** a **Finished** Effort (`fs.rename` into `.scratch/.archive/`). No Archive list and no Restore.
 - Skip prompt and Take prompt are clipboard copies only; the pasted session writes the Project.
 - **Unresolved filter** is session-only. **Paste preview** is session memory, never written, cleared on Load.
@@ -47,7 +47,7 @@ Product name is **Reader** (`wayfinder-reader`). On-screen title is `Reader`. Gl
 ## Evidence on Hand
 
 - Running product: `public/` (page, styles, client) and `src/` (Always-on Hono).
-- Product locks: `CONTEXT.md`; accepted ADRs in `docs/adr/` (0001–0016 as of this writing).
+- Product locks: `CONTEXT.md`; accepted ADRs in `docs/adr/` (0001–0018 as of this writing).
 - Always-on install/ops: `docs/always-on.md`.
 - In-repo scratch maps, issues, and prototypes under `.scratch/` (including paste-preview and dark-look in progress). Do not treat archived `.scratch/.archive/` issues as current UI contracts unless `CONTEXT.md` still cites them.
 - Hosted origin lock: GitHub Pages on `github.com/heiyukidev/wayfinder-reader`.

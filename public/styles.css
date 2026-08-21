@@ -248,7 +248,8 @@ body {
   font-size: var(--text-sm);
 }
 
-.empty-maps {
+.empty-maps,
+.snapshot-warning {
   margin: var(--space-2) var(--space-4) 0;
   padding: var(--space-2) var(--space-3);
   background: var(--color-empty-bg);

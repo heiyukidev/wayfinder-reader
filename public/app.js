@@ -27,6 +27,8 @@ import {
   togglePaste,
 } from './paste-preview.js'
 import {
+  directoryHandleFromSnapshot,
+  hostedLoadMode,
   isReadablePreviewPath,
   readPreviewFile,
   walkProject,
@@ -44,8 +46,10 @@ const projectPathLabel = document.querySelector('label[for="project-path"]')
 const projectInput = document.getElementById('project-path')
 const loadBtn = document.getElementById('load-btn')
 const projectNameEl = document.getElementById('project-name')
+const recentsLabel = document.querySelector('label[for="recents"]')
 const recentsSelect = document.getElementById('recents')
 const errorEl = document.getElementById('error')
+const snapshotWarningEl = document.getElementById('snapshot-warning')
 const emptyMapsEl = document.getElementById('empty-maps')
 const mapActionsEl = document.getElementById('map-actions')
 const unresolvedFilterEl = document.getElementById('unresolved-filter')
@@ -61,6 +65,7 @@ const pasteComposer = document.getElementById('paste-composer')
 const HOSTED_EMPTY_PREVIEW_HTML = '<p class="preview-placeholder">Load a Project.</p>'
 const ALWAYS_ON_EMPTY_PREVIEW_HTML =
   '<p class="preview-placeholder">Paste a Project path and Load.</p>'
+const CANNOT_PICK_ERROR = 'This browser cannot pick a folder.'
 const SKIP_PROMPT_PREAMBLE =
   'Skip grilling these Tickets in this session. Pick your recommended answer for all the questions. Mark them as resolved.'
 const WAYFINDER_TAKE_PREAMBLE =
@@ -80,6 +85,7 @@ let currentSites = []
 let currentProjectName = ''
 let currentProjectPath = ''
 let currentRootHandle = null
+let hostedHandleLoad = false
 let alwaysOn = false
 let remainingWorkOnly = true
 let mapListTab = 'tickets'
@@ -152,6 +158,38 @@ function showAlwaysOnChrome() {
   projectPathLabel.hidden = false
   projectInput.hidden = false
   projectNameEl.hidden = true
+  snapshotWarningEl.hidden = true
+  recentsSelect.hidden = false
+  recentsLabel.hidden = false
+}
+
+function isSafariBrowser(userAgent = get(navigator, 'userAgent', '')) {
+  const ua = userAgent || ''
+  if (
+    includes(ua, 'Chrome/') ||
+    includes(ua, 'Chromium/') ||
+    includes(ua, 'CriOS/') ||
+    includes(ua, 'Edg/') ||
+    includes(ua, 'EdgiOS/') ||
+    includes(ua, 'FxiOS/')
+  ) {
+    return false
+  }
+  return includes(ua, 'Safari/') && includes(ua, 'AppleWebKit')
+}
+
+function currentHostedLoadMode() {
+  return hostedLoadMode({
+    isSafari: isSafariBrowser(),
+    hasDirectoryPicker: typeof window.showDirectoryPicker === 'function',
+  })
+}
+
+function applyHostedLoadChrome(mode) {
+  const hideRecents = mode === 'snapshot' || mode === 'unsupported'
+  recentsSelect.hidden = hideRecents
+  recentsLabel.hidden = hideRecents
+  snapshotWarningEl.hidden = mode !== 'snapshot'
 }
 
 function showEmptyPreview() {
@@ -853,7 +891,8 @@ async function restoreTree() {
   }
 }
 
-async function loadFromHandle(handle) {
+async function loadFromHandle(handle, options = {}) {
+  const remember = get(options, 'remember', true)
   const requestId = ++projectRequestId
   ++fileRequestId
   loadBtn.disabled = true
@@ -869,6 +908,7 @@ async function loadFromHandle(handle) {
     pasteSession = markProjectLoaded()
     resetUnresolvedFilter()
     applyProjectData(data, handle)
+    hostedHandleLoad = remember
 
     const previewPath = firstPreviewPath()
     if (previewPath) {
@@ -878,6 +918,7 @@ async function loadFromHandle(handle) {
       showEmptyPreview()
     }
 
+    if (!remember) return
     const recents = await rememberHandle(handle)
     if (requestId !== projectRequestId) return
     setRecents(recents)
@@ -892,14 +933,62 @@ async function loadFromHandle(handle) {
   }
 }
 
+function pickSnapshotFiles() {
+  return new Promise((resolve) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.multiple = true
+    input.setAttribute('webkitdirectory', '')
+    input.setAttribute('directory', '')
+    input.webkitdirectory = true
+    input.hidden = true
+    document.body.appendChild(input)
+
+    let settled = false
+    const finish = (files) => {
+      if (settled) return
+      settled = true
+      input.remove()
+      resolve(files)
+    }
+
+    input.addEventListener('change', () => {
+      const list = input.files
+      if (!list || size(list) === 0) {
+        finish(null)
+        return
+      }
+      finish(toArray(list))
+    })
+    input.addEventListener('cancel', () => finish(null))
+    input.click()
+  })
+}
+
+async function loadFromSnapshotFiles(fileList) {
+  const files = map(fileList, (file) => ({
+    rel: get(file, 'webkitRelativePath') || get(file, 'name', ''),
+    file,
+  }))
+  const handle = directoryHandleFromSnapshot(files)
+  await loadFromHandle(handle, { remember: false })
+}
+
 async function pickProject() {
-  if (!window.showDirectoryPicker) {
-    showError('This Reader needs Chrome or Edge. This browser cannot pick a folder.')
+  const mode = currentHostedLoadMode()
+  if (mode === 'unsupported') {
+    showError(CANNOT_PICK_ERROR)
+    return
+  }
+  if (mode === 'snapshot') {
+    const files = await pickSnapshotFiles()
+    if (!files) return
+    await loadFromSnapshotFiles(files)
     return
   }
   try {
     const options = { mode: 'read' }
-    if (currentRootHandle) options.startIn = currentRootHandle
+    if (hostedHandleLoad && currentRootHandle) options.startIn = currentRootHandle
     const handle = await window.showDirectoryPicker(options)
     await loadFromHandle(handle)
   } catch (err) {
@@ -1023,9 +1112,13 @@ async function init() {
   }
 
   showEmptyPreview()
-  if (!window.showDirectoryPicker) {
-    showError('This Reader needs Chrome or Edge. This browser cannot pick a folder.')
+  const mode = currentHostedLoadMode()
+  applyHostedLoadChrome(mode)
+  if (mode === 'unsupported') {
+    showError(CANNOT_PICK_ERROR)
+    return
   }
+  if (mode === 'snapshot') return
   try {
     const recents = await listRecents()
     setRecents(recents)

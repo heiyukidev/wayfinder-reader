@@ -11,11 +11,13 @@ import includes from './vendor/lodash-es/includes.js'
 import indexOf from './vendor/lodash-es/indexOf.js'
 import join from './vendor/lodash-es/join.js'
 import keyBy from './vendor/lodash-es/keyBy.js'
+import keys from './vendor/lodash-es/keys.js'
 import last from './vendor/lodash-es/last.js'
 import map from './vendor/lodash-es/map.js'
 import max from './vendor/lodash-es/max.js'
 import omit from './vendor/lodash-es/omit.js'
 import replace from './vendor/lodash-es/replace.js'
+import set from './vendor/lodash-es/set.js'
 import size from './vendor/lodash-es/size.js'
 import slice from './vendor/lodash-es/slice.js'
 import some from './vendor/lodash-es/some.js'
@@ -29,6 +31,12 @@ import uniqBy from './vendor/lodash-es/uniqBy.js'
 
 const SKIP_DIRS = new Set(['node_modules', '.git'])
 const MARKDOWN_EXTS = new Set(['md', 'markdown', 'mdown', 'mkd'])
+
+export function hostedLoadMode(flags) {
+  if (get(flags, 'isSafari')) return 'unsupported'
+  if (get(flags, 'hasDirectoryPicker')) return 'handle'
+  return 'snapshot'
+}
 
 export function isHiddenDir(name) {
   return name.startsWith('.') && name !== '.scratch'
@@ -70,6 +78,88 @@ export function isReadablePreviewPath(relPath, languagePaths = []) {
   if (includes(posix, '/docs/adr/')) return true
   if (includes(posix, '/.out-of-scope/')) return true
   return false
+}
+
+function snapshotFileHandle(name, entry) {
+  return {
+    kind: 'file',
+    name,
+    async getFile() {
+      const file = get(entry, 'file')
+      if (file) return file
+      const content = get(entry, 'content', '')
+      return {
+        async text() {
+          return content
+        },
+        async arrayBuffer() {
+          return new TextEncoder().encode(content).buffer
+        },
+      }
+    },
+  }
+}
+
+function snapshotDirHandle(name, children) {
+  const byName = keyBy(children, 'name')
+  return {
+    kind: 'directory',
+    name,
+    async *values() {
+      for (const child of children) yield child
+    },
+    async getDirectoryHandle(childName) {
+      const child = get(byName, [childName])
+      if (!child || child.kind !== 'directory') {
+        const err = new Error('NotFoundError')
+        err.name = 'NotFoundError'
+        throw err
+      }
+      return child
+    },
+    async getFileHandle(childName) {
+      const child = get(byName, [childName])
+      if (!child || child.kind !== 'file') {
+        const err = new Error('NotFoundError')
+        err.name = 'NotFoundError'
+        throw err
+      }
+      return child
+    },
+  }
+}
+
+function snapshotNodeToHandle(name, node) {
+  const childDirs = map(keys(get(node, 'dirs')), (dirName) =>
+    snapshotNodeToHandle(dirName, get(node, ['dirs', dirName])),
+  )
+  const childFiles = map(keys(get(node, 'files')), (fileName) =>
+    snapshotFileHandle(fileName, get(node, ['files', fileName])),
+  )
+  return snapshotDirHandle(name, concat(childDirs, childFiles))
+}
+
+export function directoryHandleFromSnapshot(files) {
+  const projectName = get(relParts(get(files, [0, 'rel'], '')), 0, 'Project')
+  const tree = { dirs: {}, files: {} }
+
+  forEach(files, (entry) => {
+    const parts = relParts(get(entry, 'rel', ''))
+    if (size(parts) < 2) return
+    const stripped = slice(parts, 1)
+    const dirParts = slice(stripped, 0, size(stripped) - 1)
+    if (some(dirParts, (part) => shouldSkipPreviewSegment(part))) return
+    let node = tree
+    forEach(dirParts, (part) => {
+      if (!get(node, ['dirs', part])) {
+        set(node, ['dirs', part], { dirs: {}, files: {} })
+      }
+      node = get(node, ['dirs', part])
+    })
+    set(node, ['files', last(stripped)], entry)
+  })
+
+  return snapshotNodeToHandle(projectName, tree)
 }
 
 function looksLikeEffort(names) {

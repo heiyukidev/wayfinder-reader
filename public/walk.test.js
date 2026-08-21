@@ -2,13 +2,17 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import find from './vendor/lodash-es/find.js'
 import get from './vendor/lodash-es/get.js'
+import includes from './vendor/lodash-es/includes.js'
 import keyBy from './vendor/lodash-es/keyBy.js'
 import map from './vendor/lodash-es/map.js'
 import some from './vendor/lodash-es/some.js'
 import {
+  directoryHandleFromSnapshot,
+  hostedLoadMode,
   isReadablePreviewPath,
   isSiteFromNames,
   parseTerms,
+  readPreviewFile,
   shouldSkipDir,
   walkProject,
 } from './walk.js'
@@ -293,4 +297,107 @@ test('terms parse from Glossary; preview paths stay in the Readable tree', () =>
   assert.equal(isReadablePreviewPath('.scratch/../package.json'), false)
   assert.equal(isReadablePreviewPath('.scratch/.archive/old/map.md'), false)
   assert.equal(isReadablePreviewPath('node_modules/x.md'), false)
+})
+
+test('hosted Load is handle, snapshot, or unsupported from Safari and picker flags', () => {
+  assert.equal(hostedLoadMode({ isSafari: true, hasDirectoryPicker: true }), 'unsupported')
+  assert.equal(hostedLoadMode({ isSafari: true, hasDirectoryPicker: false }), 'unsupported')
+  assert.equal(hostedLoadMode({ isSafari: false, hasDirectoryPicker: true }), 'handle')
+  assert.equal(hostedLoadMode({ isSafari: false, hasDirectoryPicker: false }), 'snapshot')
+})
+
+test('snapshot of a Project root finds the Site, Effort Map, and folder name', async () => {
+  const files = [
+    { rel: 'wayfinder-reader/CONTEXT.md', content: '# Reader\n' },
+    { rel: 'wayfinder-reader/.scratch/hosted-reader/map.md', content: '# Host the Reader\n' },
+  ]
+  const walked = await walkProject(directoryHandleFromSnapshot(files))
+  assert.equal(walked.projectName, 'wayfinder-reader')
+  assert.deepEqual(map(walked.sites, 'rel'), ['.'])
+  assert.deepEqual(map(walked.decisions, 'title'), ['Host the Reader'])
+  assert.deepEqual(map(walked.decisions, 'path'), ['.scratch/hosted-reader/map.md'])
+})
+
+test('snapshot omits skipped trees and does not read their bytes', async () => {
+  const reads = []
+  const files = [
+    { rel: 'wayfinder-reader/CONTEXT.md', get content() { reads.push('CONTEXT.md'); return '# Reader\n' } },
+    {
+      rel: 'wayfinder-reader/.scratch/hosted-reader/map.md',
+      get content() { reads.push('map.md'); return '# Host the Reader\n' },
+    },
+    {
+      rel: 'wayfinder-reader/node_modules/secret.md',
+      get content() { reads.push('secret.md'); return '# leaked\n' },
+    },
+    {
+      rel: 'wayfinder-reader/.git/HEAD',
+      get content() { reads.push('HEAD'); return 'ref' },
+    },
+    {
+      rel: 'wayfinder-reader/.hidden/.env',
+      get content() { reads.push('.env'); return 'SECRET=1' },
+    },
+  ]
+  const handle = directoryHandleFromSnapshot(files)
+  const names = []
+  for await (const child of handle.values()) names.push(child.name)
+  assert.equal(some(names, (name) => name === 'node_modules' || name === '.git' || name === '.hidden'), false)
+  assert.equal(some(reads, (name) => name === 'secret.md' || name === 'HEAD' || name === '.env'), false)
+
+  const walked = await walkProject(handle)
+  assert.deepEqual(map(walked.decisions, 'title'), ['Host the Reader'])
+  assert.equal(some(reads, (name) => name === 'secret.md' || name === 'HEAD' || name === '.env'), false)
+})
+
+test('snapshot keeps named-hole Out-of-scope records and omits other hidden dirs', async () => {
+  const files = [
+    { rel: 'wayfinder-reader/CONTEXT.md', content: '# Reader\n' },
+    { rel: 'wayfinder-reader/.out-of-scope/rejected.md', content: '# Rejected\n' },
+    { rel: 'wayfinder-reader/.config/.env', content: 'SECRET=1' },
+  ]
+  const walked = await walkProject(directoryHandleFromSnapshot(files))
+  assert.deepEqual(map(walked.outOfScope, 'title'), ['Rejected'])
+  assert.deepEqual(map(walked.outOfScope, 'path'), ['.out-of-scope/rejected.md'])
+  assert.equal(
+    some(walked.language, (row) => includes(get(row, 'path', ''), '.env')),
+    false,
+  )
+})
+
+test('snapshot walk matches handle walk of the same Project tree', async () => {
+  const root = dirHandle('wayfinder-reader', [
+    fileHandle('CONTEXT.md', '# Reader\n\n## Language\n\n**Site**:\nA directory.\n'),
+    dirHandle('docs', [
+      dirHandle('adr', [fileHandle('0018.md', '# Directory snapshot\n')]),
+    ]),
+    dirHandle('.out-of-scope', [fileHandle('rejected.md', '# Rejected\n')]),
+    dirHandle('.scratch', [
+      dirHandle('hosted-reader', [fileHandle('map.md', '# Host the Reader\n')]),
+    ]),
+    dirHandle('node_modules', [fileHandle('secret.md', '# leaked\n')]),
+    dirHandle('.hidden', [fileHandle('.env', 'SECRET=1')]),
+  ])
+  const files = [
+    { rel: 'wayfinder-reader/CONTEXT.md', content: '# Reader\n\n## Language\n\n**Site**:\nA directory.\n' },
+    { rel: 'wayfinder-reader/docs/adr/0018.md', content: '# Directory snapshot\n' },
+    { rel: 'wayfinder-reader/.out-of-scope/rejected.md', content: '# Rejected\n' },
+    { rel: 'wayfinder-reader/.scratch/hosted-reader/map.md', content: '# Host the Reader\n' },
+    { rel: 'wayfinder-reader/node_modules/secret.md', content: '# leaked\n' },
+    { rel: 'wayfinder-reader/.hidden/.env', content: 'SECRET=1' },
+  ]
+  const fromHandle = await walkProject(root)
+  const fromSnapshot = await walkProject(directoryHandleFromSnapshot(files))
+  assert.deepEqual(fromSnapshot, fromHandle)
+})
+
+test('preview-read after snapshot adapt returns the file text', async () => {
+  const handle = directoryHandleFromSnapshot([
+    { rel: 'wayfinder-reader/CONTEXT.md', content: '# Reader\n' },
+    { rel: 'wayfinder-reader/.scratch/hosted-reader/map.md', content: '# Host the Reader\n' },
+  ])
+  const preview = await readPreviewFile(handle, 'CONTEXT.md', ['CONTEXT.md'])
+  assert.equal(preview.content, '# Reader\n')
+  assert.equal(preview.contentType, 'text/markdown')
+  assert.equal(preview.noPreview, false)
 })

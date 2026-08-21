@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Reader</title>
-    <link rel="stylesheet" href="./styles.css?v=dark3" />
+    <link rel="stylesheet" href="./styles.css?v=dark4" />
   </head>
   <body>
     <header class="header">
@@ -20,7 +20,7 @@
         />
         <button id="load-btn" type="button" aria-label="Load">Load</button>
         <span id="project-name" class="project-name" hidden></span>
-        <label class="field-label" for="recents">Recents</label>
+        <label class="field-label" for="recents" id="recents-label">Recents</label>
         <select id="recents" aria-label="Recent projects">
           <option value="">Choose…</option>
         </select>
@@ -29,6 +29,9 @@
 
     <div class="banners">
       <div id="error" class="error" role="alert" hidden></div>
+      <div id="snapshot-warning" class="snapshot-warning" hidden>
+        A large Project can take a while to Load.
+      </div>
       <div id="empty-maps" class="empty-maps" aria-live="polite" hidden>
         This Project has no language documents, Efforts, ADRs, or Out-of-scope records.
       </div>
