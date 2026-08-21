@@ -254,7 +254,7 @@ Below 800px the desk stacks: header controls wrap, the Map list becomes a 40vh b
 
 Flat at rest. Depth is tonal: Pale Chrome around the desk, Stone Sidebar recessed from Laid Paper, Warm Hairline as the only rest edge. No drop shadow on header, sidebar, buttons, rows, or the preview pane.
 
-The Term hint slip is the sole lift. Frontier is not a shadow: it is an inset 1px Chart Navy rule on the ticket row. Selected rows and active tabs use Chart Navy Wash, not elevation. Loading preview fades opacity (180ms ease-out); it does not dim with a veil.
+The Term hint slip is the sole lift. Frontier is not a shadow: it is an inset 1px Chart Navy rule on the ticket row. Selected rows and active tabs use Chart Navy Wash, not elevation. A pending Load occupies the desk: ghost Map-list rows on stone, “Opening this Project.” on paper. File switch dims the current preview (180ms ease-out); it does not dim with a veil, spin, or replace the pane with “Loading…”.
 
 ### Shadow Vocabulary
 
@@ -322,8 +322,9 @@ Dotted underline in the existing ink (1px, 0.18em offset), `cursor: help`. No co
 - **Do** set chrome, the Map list, and controls in Source Sans 3.
 - **Do** separate panes with Warm Hairline and tone (Pale Chrome / Stone Sidebar / Laid Paper).
 - **Do** mark Frontier with the inset 1px Accent Ink rule and the Frontier chip, not a glow.
-- **Do** honor `prefers-reduced-motion`: preview swap is 180ms opacity, or none.
+- **Do** honor `prefers-reduced-motion`: preview swap is 180ms opacity, or none; pending Map-list bars stay still.
 - **Do** keep `color-scheme: dark` on the page. Always dark; no selector.
+- **Do** occupy a pending Load with ghost Map-list rows and “Opening this Project.” on paper. File switch dims the current preview; it does not replace it with copy.
 
 ### Don't:
 
@@ -334,3 +335,4 @@ Dotted underline in the existing ink (1px, 0.18em offset), `cursor: help`. No co
 - **Don't** drop-shadow header, sidebar, paper, or buttons. The hint slip is the exception.
 - **Don't** card the preview or the Paste composer.
 - **Don't** use radii above 4px, pills, or display type.
+- **Don't** veil the desk, spin, or flash italic “Loading…”.

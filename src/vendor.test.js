@@ -111,3 +111,15 @@ test('hosted Reader Load is a directory picker; Always-on path and Archive are f
   assert.match(app, /archiveEffort/)
   assert.match(app, /detectAlwaysOn/)
 })
+
+test('pending Load occupies the desk; file switch does not say Loading…', () => {
+  const app = fs.readFileSync(path.join(PUBLIC, 'app.js'), 'utf8')
+  const css = fs.readFileSync(STYLES_CSS, 'utf8')
+  assert.match(app, /beginPendingLoad/)
+  assert.match(app, /pending-load\.js/)
+  assert.doesNotMatch(app, /Loading…/)
+  assert.doesNotMatch(app, /showLoadingPreview/)
+  assert.match(css, /\.map-pending-bar/)
+  assert.match(css, /map-pending-breathe/)
+  assert.doesNotMatch(css, /preview-loading-text/)
+})

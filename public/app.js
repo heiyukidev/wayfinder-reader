@@ -39,6 +39,7 @@ import {
   requestReadPermission,
   queryReadPermission,
 } from './recents.js'
+import { PENDING_MAP_BARS, pendingPreviewHtml } from './pending-load.js'
 
 marked.setOptions({ gfm: true })
 
@@ -61,6 +62,7 @@ const previewEl = document.getElementById('preview')
 const captionText = document.getElementById('caption-text')
 const captionActions = document.getElementById('caption-actions')
 const pasteComposer = document.getElementById('paste-composer')
+const layoutEl = document.querySelector('main.layout')
 
 const HOSTED_EMPTY_PREVIEW_HTML = '<p class="preview-placeholder">Load a Project.</p>'
 const ALWAYS_ON_EMPTY_PREVIEW_HTML =
@@ -94,6 +96,7 @@ let selectedRelPath = null
 let pasteSession = createPasteSession()
 let fileRequestId = 0
 let projectRequestId = 0
+let loadPending = false
 
 function showError(message) {
   if (!message) {
@@ -192,25 +195,121 @@ function applyHostedLoadChrome(mode) {
   snapshotWarningEl.hidden = mode !== 'snapshot'
 }
 
+function endPendingLoad() {
+  loadPending = false
+  layoutEl.removeAttribute('aria-busy')
+  mapListEl.removeAttribute('aria-busy')
+  previewEl.removeAttribute('aria-busy')
+  previewEl.removeAttribute('aria-live')
+  previewEl.classList.remove('preview-pending')
+}
+
 function showEmptyPreview() {
+  endPendingLoad()
   selectedRelPath = null
   pasteSession = leavePaste(pasteSession)
   hideTermHintCard()
   hidePasteComposer()
-  previewEl.classList.remove('is-loading', 'is-swapping')
+  previewEl.classList.remove('is-loading', 'is-swapping', 'preview-pending')
   previewEl.classList.add('preview-empty')
   previewEl.innerHTML = emptyPreviewHtml()
   paintCaption()
   updateCopyControl()
 }
 
-function showLoadingPreview() {
+function setPreviewBusy(busy) {
+  if (busy) previewEl.setAttribute('aria-busy', 'true')
+  else previewEl.removeAttribute('aria-busy')
+}
+
+function showPendingPreview() {
   hideTermHintCard()
   hidePasteComposer()
+  previewEl.classList.remove('preview-empty', 'is-loading', 'is-swapping')
+  previewEl.classList.add('preview-pending')
+  previewEl.innerHTML = pendingPreviewHtml()
+  previewEl.setAttribute('aria-live', 'polite')
+  setPreviewBusy(true)
+}
+
+function renderPendingMapList() {
+  mapListEl.innerHTML = ''
+  mapListEl.setAttribute('aria-busy', 'true')
+
+  const tabs = document.createElement('div')
+  tabs.className = 'map-list-tabs'
+  forEach(
+    [
+      { id: 'context', label: 'Context' },
+      { id: 'tickets', label: 'Tickets' },
+    ],
+    (tab) => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'map-list-tab'
+      if (tab.id === 'tickets') button.classList.add('is-active')
+      button.textContent = tab.label
+      button.tabIndex = -1
+      button.setAttribute('aria-disabled', 'true')
+      tabs.appendChild(button)
+    },
+  )
+  mapListEl.appendChild(tabs)
+
+  let group = null
+  forEach(PENDING_MAP_BARS, (bar) => {
+    if (get(bar, 'kind') === 'label' || !group) {
+      group = document.createElement('div')
+      group.className = 'map-pending-group'
+      group.setAttribute('aria-hidden', 'true')
+      mapListEl.appendChild(group)
+    }
+    const el = document.createElement('span')
+    el.className = `map-pending-bar is-${get(bar, 'kind')}`
+    el.style.width = get(bar, 'width')
+    group.appendChild(el)
+  })
+}
+
+function clearLoadedProject() {
+  currentMaps = []
+  currentDecisions = []
+  currentAdrs = []
+  currentOutOfScope = []
+  currentLanguage = []
+  currentTerms = []
+  currentSites = []
+  currentProjectPath = ''
+  currentProjectName = ''
+  currentRootHandle = null
+  selectedRelPath = null
+  selectedTicketPaths = []
+  hostedHandleLoad = false
+}
+
+function beginPendingLoad(projectLabel) {
+  loadPending = true
+  layoutEl.setAttribute('aria-busy', 'true')
+  clearLoadedProject()
+  pasteSession = createPasteSession()
+  copyStatusEl.textContent = ''
+  mapListTab = 'tickets'
+  resetUnresolvedFilter()
+  emptyMapsEl.hidden = true
+  if (alwaysOn) {
+    projectNameEl.hidden = true
+  } else if (projectLabel) {
+    currentProjectName = projectLabel
+    projectNameEl.hidden = false
+    projectNameEl.textContent = projectLabel
+  } else {
+    projectNameEl.hidden = true
+    projectNameEl.textContent = ''
+  }
+  renderPendingMapList()
+  showPendingPreview()
   paintCaption()
-  previewEl.classList.remove('preview-empty', 'is-swapping')
-  previewEl.classList.add('is-loading')
-  previewEl.innerHTML = '<p class="preview-loading-text">Loading…</p>'
+  updateCopyControl()
 }
 
 function applyPreviewTermHints(previewPath) {
@@ -271,7 +370,7 @@ function renderPastePane() {
     return
   }
   hidePasteComposer()
-  previewEl.classList.remove('preview-empty', 'is-loading', 'is-swapping')
+  previewEl.classList.remove('preview-empty', 'is-loading', 'is-swapping', 'preview-pending')
   const source = get(pasteSession, 'buffer', '')
   if (!source) {
     previewEl.classList.add('preview-empty')
@@ -299,7 +398,7 @@ function onPasteClick() {
   }
   hideTermHintCard()
   hidePasteComposer()
-  previewEl.classList.remove('is-loading', 'is-swapping')
+  previewEl.classList.remove('is-loading', 'is-swapping', 'preview-pending')
   previewEl.classList.add('preview-empty')
   previewEl.innerHTML = emptyPreviewHtml()
   paintCaption()
@@ -600,7 +699,19 @@ function showSiteLabels() {
 }
 
 function renderMapList() {
+  if (
+    loadPending &&
+    size(currentDecisions) === 0 &&
+    size(currentLanguage) === 0 &&
+    size(currentAdrs) === 0 &&
+    size(currentOutOfScope) === 0
+  ) {
+    renderPendingMapList()
+    return
+  }
+
   mapListEl.innerHTML = ''
+  mapListEl.removeAttribute('aria-busy')
   const tabs = document.createElement('div')
   tabs.className = 'map-list-tabs'
   tabs.appendChild(makeMapListTab('context', 'Context'))
@@ -709,7 +820,14 @@ async function selectFile(relPath) {
   pasteSession = leavePaste(pasteSession)
   renderMapList()
   updateCopyControl()
-  showLoadingPreview()
+  hideTermHintCard()
+  hidePasteComposer()
+  paintCaption()
+  setPreviewBusy(true)
+  if (!loadPending) {
+    previewEl.classList.remove('preview-empty', 'is-swapping', 'preview-pending')
+    previewEl.classList.add('is-loading')
+  }
 
   try {
     if (!alwaysOn && !currentRootHandle) throw new Error('No Project loaded')
@@ -718,19 +836,29 @@ async function selectFile(relPath) {
       : await readPreviewFile(currentRootHandle, relPath, languagePaths())
     if (requestId !== fileRequestId) return
 
-    previewEl.classList.remove('is-loading')
+    const wasPending = loadPending
+    endPendingLoad()
+    previewEl.classList.remove('is-loading', 'preview-empty', 'preview-pending')
+    if (wasPending) {
+      renderPreviewContent(data, relPath)
+      setPreviewBusy(false)
+      return
+    }
+
     previewEl.classList.add('is-swapping')
-    previewEl.classList.remove('preview-empty')
 
     requestAnimationFrame(() => {
       if (requestId !== fileRequestId) return
       renderPreviewContent(data, relPath)
       previewEl.classList.remove('is-swapping')
+      setPreviewBusy(false)
     })
   } catch (err) {
     if (requestId !== fileRequestId) return
-    previewEl.classList.remove('is-loading', 'is-swapping', 'preview-empty')
+    endPendingLoad()
+    previewEl.classList.remove('is-loading', 'is-swapping', 'preview-empty', 'preview-pending')
     previewEl.innerHTML = `<p class="no-preview">${escapeHtml(err.message)}</p>`
+    setPreviewBusy(false)
   }
 }
 
@@ -836,12 +964,8 @@ async function loadProject(projectPath) {
   const requestId = ++projectRequestId
   ++fileRequestId
   loadBtn.disabled = true
-  selectedTicketPaths = []
-  copyStatusEl.textContent = ''
-  mapListTab = 'tickets'
-  resetUnresolvedFilter()
-  updateCopyControl()
   showError('')
+  beginPendingLoad()
   try {
     const data = await api('/api/project', {
       method: 'POST',
@@ -869,12 +993,8 @@ async function restoreTree() {
   const requestId = ++projectRequestId
   ++fileRequestId
   loadBtn.disabled = true
-  selectedTicketPaths = []
-  copyStatusEl.textContent = ''
-  mapListTab = 'tickets'
-  resetUnresolvedFilter()
-  updateCopyControl()
   showError('')
+  beginPendingLoad()
   try {
     const data = await api('/api/tree')
     if (requestId !== projectRequestId) return
@@ -896,12 +1016,8 @@ async function loadFromHandle(handle, options = {}) {
   const requestId = ++projectRequestId
   ++fileRequestId
   loadBtn.disabled = true
-  selectedTicketPaths = []
-  copyStatusEl.textContent = ''
-  mapListTab = 'tickets'
-  resetUnresolvedFilter()
-  updateCopyControl()
   showError('')
+  beginPendingLoad(get(handle, 'name', ''))
   try {
     const data = await walkProject(handle)
     if (requestId !== projectRequestId) return
@@ -1102,34 +1218,44 @@ async function init() {
   const state = await detectAlwaysOn()
   if (state) {
     showAlwaysOnChrome()
-    showEmptyPreview()
     setRecents(get(state, 'recents', []))
     if (get(state, 'lastProjectPath')) {
       projectInput.value = state.lastProjectPath
       await restoreTree()
+    } else {
+      showEmptyPreview()
     }
     return
   }
 
-  showEmptyPreview()
   const mode = currentHostedLoadMode()
   applyHostedLoadChrome(mode)
   if (mode === 'unsupported') {
+    showEmptyPreview()
     showError(CANNOT_PICK_ERROR)
     return
   }
-  if (mode === 'snapshot') return
+  if (mode === 'snapshot') {
+    showEmptyPreview()
+    return
+  }
   try {
     const recents = await listRecents()
     setRecents(recents)
-    const last = get(recents, 0)
-    const handle = get(last, 'handle')
-    if (!handle) return
+    const lastRecent = get(recents, 0)
+    const handle = get(lastRecent, 'handle')
+    if (!handle) {
+      showEmptyPreview()
+      return
+    }
     const permission = await queryReadPermission(handle)
     if (permission === 'granted') {
       await loadFromHandle(handle)
+      return
     }
+    showEmptyPreview()
   } catch (err) {
+    showEmptyPreview()
     showError(err.message)
   }
 }

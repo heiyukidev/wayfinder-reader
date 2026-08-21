@@ -753,16 +753,68 @@ body {
   opacity: 0;
 }
 
-.preview-placeholder,
-.preview-loading-text {
+.preview-placeholder {
   font-family: var(--font-sans);
   font-size: var(--text-base);
   color: var(--color-ink-placeholder);
   margin: 0;
 }
 
-.preview-loading-text {
+.preview-pending-text {
   font-style: italic;
+}
+
+.map-list-tab[aria-disabled='true'] {
+  pointer-events: none;
+  cursor: default;
+}
+
+.map-pending-group {
+  padding: 0 0 var(--space-3);
+  margin: 0 0 var(--space-3);
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.map-pending-group:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.map-pending-bar {
+  display: block;
+  height: 11px;
+  margin: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-hairline);
+}
+
+.map-pending-bar.is-label {
+  height: 8px;
+  margin: var(--space-2) var(--space-2) var(--space-1);
+  opacity: 0.65;
+}
+
+.map-pending-bar.is-heading,
+.map-pending-bar.is-ticket {
+  animation: map-pending-breathe 1.6s ease-in-out infinite alternate;
+}
+
+.map-pending-bar.is-heading {
+  height: 12px;
+}
+
+.map-pending-bar.is-ticket {
+  height: 10px;
+  margin-left: var(--space-5);
+}
+
+@keyframes map-pending-breathe {
+  from {
+    opacity: 0.72;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .preview h1,
@@ -1103,5 +1155,9 @@ body {
   .preview,
   .preview-caption {
     transition: none;
+  }
+
+  .map-pending-bar {
+    animation: none;
   }
 }
