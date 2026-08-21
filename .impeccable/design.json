@@ -1,0 +1,430 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-20T11:36:30Z",
+  "title": "Design System: Reader",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Warm Ink",
+        "canonical": "oklch(21.6% 0.006 56.0)",
+        "tonalRamp": [
+          "oklch(18.0% 0.005 56.0)",
+          "oklch(28.0% 0.005 56.0)",
+          "oklch(38.0% 0.006 56.0)",
+          "oklch(50.0% 0.006 56.0)",
+          "oklch(62.0% 0.006 56.0)",
+          "oklch(74.0% 0.006 56.0)",
+          "oklch(86.0% 0.006 56.0)",
+          "oklch(95.0% 0.005 56.0)"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "oklch(44.4% 0.010 73.6)",
+        "tonalRamp": [
+          "oklch(18.0% 0.008 73.6)",
+          "oklch(28.0% 0.008 73.6)",
+          "oklch(38.0% 0.010 73.6)",
+          "oklch(50.0% 0.010 73.6)",
+          "oklch(62.0% 0.010 73.6)",
+          "oklch(74.0% 0.010 73.6)",
+          "oklch(86.0% 0.010 73.6)",
+          "oklch(95.0% 0.008 73.6)"
+        ]
+      },
+      "ink-placeholder": {
+        "role": "neutral",
+        "displayName": "Placeholder Ink",
+        "canonical": "oklch(55.3% 0.012 58.1)",
+        "tonalRamp": [
+          "oklch(18.0% 0.010 58.1)",
+          "oklch(28.0% 0.010 58.1)",
+          "oklch(38.0% 0.012 58.1)",
+          "oklch(50.0% 0.012 58.1)",
+          "oklch(62.0% 0.012 58.1)",
+          "oklch(74.0% 0.012 58.1)",
+          "oklch(86.0% 0.012 58.1)",
+          "oklch(95.0% 0.010 58.1)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Laid Paper",
+        "canonical": "oklch(95.4% 0.013 82.4)",
+        "tonalRamp": [
+          "oklch(18.0% 0.011 82.4)",
+          "oklch(28.0% 0.011 82.4)",
+          "oklch(38.0% 0.013 82.4)",
+          "oklch(50.0% 0.013 82.4)",
+          "oklch(62.0% 0.013 82.4)",
+          "oklch(74.0% 0.013 82.4)",
+          "oklch(86.0% 0.013 82.4)",
+          "oklch(95.0% 0.011 82.4)"
+        ]
+      },
+      "sidebar": {
+        "role": "neutral",
+        "displayName": "Stone Sidebar",
+        "canonical": "oklch(93.2% 0.013 86.8)",
+        "tonalRamp": [
+          "oklch(18.0% 0.011 86.8)",
+          "oklch(28.0% 0.011 86.8)",
+          "oklch(38.0% 0.013 86.8)",
+          "oklch(50.0% 0.013 86.8)",
+          "oklch(62.0% 0.013 86.8)",
+          "oklch(74.0% 0.013 86.8)",
+          "oklch(86.0% 0.013 86.8)",
+          "oklch(95.0% 0.011 86.8)"
+        ]
+      },
+      "chrome": {
+        "role": "neutral",
+        "displayName": "Pale Chrome",
+        "canonical": "oklch(97.0% 0.007 88.6)",
+        "tonalRamp": [
+          "oklch(18.0% 0.006 88.6)",
+          "oklch(28.0% 0.006 88.6)",
+          "oklch(38.0% 0.007 88.6)",
+          "oklch(50.0% 0.007 88.6)",
+          "oklch(62.0% 0.007 88.6)",
+          "oklch(74.0% 0.007 88.6)",
+          "oklch(86.0% 0.007 88.6)",
+          "oklch(95.0% 0.006 88.6)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Warm Hairline",
+        "canonical": "oklch(85.5% 0.016 86.4)",
+        "tonalRamp": [
+          "oklch(18.0% 0.014 86.4)",
+          "oklch(28.0% 0.014 86.4)",
+          "oklch(38.0% 0.016 86.4)",
+          "oklch(50.0% 0.016 86.4)",
+          "oklch(62.0% 0.016 86.4)",
+          "oklch(74.0% 0.016 86.4)",
+          "oklch(86.0% 0.016 86.4)",
+          "oklch(95.0% 0.014 86.4)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Chart Navy",
+        "canonical": "oklch(34.6% 0.074 256.0)",
+        "tonalRamp": [
+          "oklch(18.0% 0.063 256.0)",
+          "oklch(28.0% 0.063 256.0)",
+          "oklch(38.0% 0.074 256.0)",
+          "oklch(50.0% 0.074 256.0)",
+          "oklch(62.0% 0.074 256.0)",
+          "oklch(74.0% 0.074 256.0)",
+          "oklch(86.0% 0.074 256.0)",
+          "oklch(95.0% 0.063 256.0)"
+        ]
+      },
+      "accent-hover": {
+        "role": "primary",
+        "displayName": "Chart Navy Hover",
+        "canonical": "oklch(40.4% 0.084 253.6)",
+        "tonalRamp": [
+          "oklch(18.0% 0.072 253.6)",
+          "oklch(28.0% 0.072 253.6)",
+          "oklch(38.0% 0.084 253.6)",
+          "oklch(50.0% 0.084 253.6)",
+          "oklch(62.0% 0.084 253.6)",
+          "oklch(74.0% 0.084 253.6)",
+          "oklch(86.0% 0.084 253.6)",
+          "oklch(95.0% 0.072 253.6)"
+        ]
+      },
+      "accent-wash": {
+        "role": "primary",
+        "displayName": "Chart Navy Wash",
+        "canonical": "rgba(30, 58, 95, 0.1)",
+        "tonalRamp": [
+          "oklch(18.0% 0.063 256.0)",
+          "oklch(28.0% 0.063 256.0)",
+          "oklch(38.0% 0.074 256.0)",
+          "oklch(50.0% 0.074 256.0)",
+          "oklch(62.0% 0.074 256.0)",
+          "oklch(74.0% 0.074 256.0)",
+          "oklch(86.0% 0.074 256.0)",
+          "oklch(95.0% 0.063 256.0)"
+        ]
+      },
+      "error-bg": {
+        "role": "neutral",
+        "displayName": "Error Paper",
+        "canonical": "oklch(95.0% 0.016 32.0)",
+        "tonalRamp": [
+          "oklch(18.0% 0.013 32.0)",
+          "oklch(28.0% 0.013 32.0)",
+          "oklch(38.0% 0.016 32.0)",
+          "oklch(50.0% 0.016 32.0)",
+          "oklch(62.0% 0.016 32.0)",
+          "oklch(74.0% 0.016 32.0)",
+          "oklch(86.0% 0.016 32.0)",
+          "oklch(95.0% 0.013 32.0)"
+        ]
+      },
+      "error-text": {
+        "role": "neutral",
+        "displayName": "Error Ink",
+        "canonical": "oklch(41.0% 0.107 23.0)",
+        "tonalRamp": [
+          "oklch(18.0% 0.091 23.0)",
+          "oklch(28.0% 0.091 23.0)",
+          "oklch(38.0% 0.107 23.0)",
+          "oklch(50.0% 0.107 23.0)",
+          "oklch(62.0% 0.107 23.0)",
+          "oklch(74.0% 0.107 23.0)",
+          "oklch(86.0% 0.107 23.0)",
+          "oklch(95.0% 0.091 23.0)"
+        ]
+      },
+      "error-border": {
+        "role": "neutral",
+        "displayName": "Error Hairline",
+        "canonical": "oklch(85.0% 0.042 29.1)",
+        "tonalRamp": [
+          "oklch(18.0% 0.036 29.1)",
+          "oklch(28.0% 0.036 29.1)",
+          "oklch(38.0% 0.042 29.1)",
+          "oklch(50.0% 0.042 29.1)",
+          "oklch(62.0% 0.042 29.1)",
+          "oklch(74.0% 0.042 29.1)",
+          "oklch(86.0% 0.042 29.1)",
+          "oklch(95.0% 0.036 29.1)"
+        ]
+      },
+      "empty-bg": {
+        "role": "neutral",
+        "displayName": "Empty Paper",
+        "canonical": "oklch(96.5% 0.013 86.8)",
+        "tonalRamp": [
+          "oklch(18.0% 0.011 86.8)",
+          "oklch(28.0% 0.011 86.8)",
+          "oklch(38.0% 0.013 86.8)",
+          "oklch(50.0% 0.013 86.8)",
+          "oklch(62.0% 0.013 86.8)",
+          "oklch(74.0% 0.013 86.8)",
+          "oklch(86.0% 0.013 86.8)",
+          "oklch(95.0% 0.011 86.8)"
+        ]
+      },
+      "empty-text": {
+        "role": "neutral",
+        "displayName": "Empty Ink",
+        "canonical": "oklch(44.8% 0.021 72.8)",
+        "tonalRamp": [
+          "oklch(18.0% 0.018 72.8)",
+          "oklch(28.0% 0.018 72.8)",
+          "oklch(38.0% 0.021 72.8)",
+          "oklch(50.0% 0.021 72.8)",
+          "oklch(62.0% 0.021 72.8)",
+          "oklch(74.0% 0.021 72.8)",
+          "oklch(86.0% 0.021 72.8)",
+          "oklch(95.0% 0.018 72.8)"
+        ]
+      },
+      "empty-border": {
+        "role": "neutral",
+        "displayName": "Empty Hairline",
+        "canonical": "oklch(88.7% 0.019 83.1)",
+        "tonalRamp": [
+          "oklch(18.0% 0.016 83.1)",
+          "oklch(28.0% 0.016 83.1)",
+          "oklch(38.0% 0.019 83.1)",
+          "oklch(50.0% 0.019 83.1)",
+          "oklch(62.0% 0.019 83.1)",
+          "oklch(74.0% 0.019 83.1)",
+          "oklch(86.0% 0.019 83.1)",
+          "oklch(95.0% 0.016 83.1)"
+        ]
+      },
+      "code-bg": {
+        "role": "neutral",
+        "displayName": "Code Wash",
+        "canonical": "oklch(91.7% 0.016 86.4)",
+        "tonalRamp": [
+          "oklch(18.0% 0.013 86.4)",
+          "oklch(28.0% 0.013 86.4)",
+          "oklch(38.0% 0.016 86.4)",
+          "oklch(50.0% 0.016 86.4)",
+          "oklch(62.0% 0.016 86.4)",
+          "oklch(74.0% 0.016 86.4)",
+          "oklch(86.0% 0.016 86.4)",
+          "oklch(95.0% 0.013 86.4)"
+        ]
+      },
+      "input-fill": {
+        "role": "neutral",
+        "displayName": "Input Fill",
+        "canonical": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "oklch(18.0% 0.000 89.9)",
+          "oklch(28.0% 0.000 89.9)",
+          "oklch(38.0% 0.000 89.9)",
+          "oklch(50.0% 0.000 89.9)",
+          "oklch(62.0% 0.000 89.9)",
+          "oklch(74.0% 0.000 89.9)",
+          "oklch(86.0% 0.000 89.9)",
+          "oklch(95.0% 0.000 89.9)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Preview h1 only." },
+      "headline": { "displayName": "Headline", "purpose": "Preview h2." },
+      "title": { "displayName": "Title", "purpose": "Preview h3. Map-list titles stay chrome sans." },
+      "body": { "displayName": "Body", "purpose": "GFM preview and Paste composer at 16px / 1.65, 72ch." },
+      "chrome": { "displayName": "Chrome", "purpose": "Header, Map list, and controls in Source Sans 3 at 14px." },
+      "label": { "displayName": "Label", "purpose": "Captions, paths, site labels, field labels at 12px." },
+      "mark": { "displayName": "Mark", "purpose": "Uppercase 10px chips and Archive." }
+    },
+    "shadows": [
+      {
+        "name": "hint-slip",
+        "value": "0 12px 28px rgba(28, 25, 23, 0.12)",
+        "purpose": "The only drop shadow. Term hint card while a hint is hovered."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 2px var(--color-chrome), 0 0 0 4px var(--color-accent)",
+        "purpose": "Keyboard focus on controls. State, not rest."
+      },
+      {
+        "name": "frontier-rule",
+        "value": "inset 1px 0 var(--color-accent)",
+        "purpose": "Current remaining-work mark on a ticket row. Not a glow."
+      }
+    ],
+    "motion": [
+      {
+        "name": "swap",
+        "value": "opacity 180ms ease-out",
+        "purpose": "Preview and caption swap. None under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "stack",
+        "value": "800px",
+        "purpose": "Desk stacks: Map list becomes a 40vh band; pane padding drops to 16px."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Load",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The only Chart Navy fill on the desk.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Load</button>",
+      "css": ".ds-btn-primary { padding: 6px 14px; font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 500; line-height: 1.5; border: 1px solid var(--color-accent, #1e3a5f); border-radius: 4px; background: var(--color-accent, #1e3a5f); color: #fff; cursor: pointer; } .ds-btn-primary:hover { background: var(--color-accent-hover, #254a75); border-color: var(--color-accent-hover, #254a75); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-chrome, #f7f5f0), 0 0 0 4px var(--color-accent, #1e3a5f); } .ds-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }"
+    },
+    {
+      "name": "Outline action",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Copy Skip, Copy Take, and Paste — navy stroke, never a second fill.",
+      "html": "<button class=\"ds-btn-outline\" type=\"button\">Copy Skip prompt</button>",
+      "css": ".ds-btn-outline { min-height: 28px; padding: 4px 8px; font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 500; line-height: 1.35; border: 1px solid var(--color-accent, #1e3a5f); border-radius: 4px; background: transparent; color: var(--color-accent, #1e3a5f); cursor: pointer; transition: background 180ms ease-out, border-color 180ms ease-out; } .ds-btn-outline:hover { background: var(--color-accent-wash, rgba(30, 58, 95, 0.1)); } .ds-btn-outline:active { border-color: var(--color-accent-hover, #254a75); background: rgba(30, 58, 95, 0.16); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-chrome, #f7f5f0), 0 0 0 4px var(--color-accent, #1e3a5f); }"
+    },
+    {
+      "name": "Archive",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Ghost mark for Archive — uppercase, hairline, never navy fill.",
+      "html": "<button class=\"ds-btn-ghost\" type=\"button\">Archive</button>",
+      "css": ".ds-btn-ghost { padding: 1px 6px; font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.03em; line-height: 1.4; text-transform: uppercase; border: 1px solid var(--color-hairline, #d4cfc4); border-radius: 3px; background: transparent; color: var(--color-ink-muted, #57534e); cursor: pointer; } .ds-btn-ghost:hover { background: rgba(28, 25, 23, 0.04); color: var(--color-ink, #1c1917); } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-chrome, #f7f5f0), 0 0 0 4px var(--color-accent, #1e3a5f); }"
+    },
+    {
+      "name": "Project path",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Native path field — Input Fill with a Warm Hairline, not a card.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"/Users/…/project\" />",
+      "css": ".ds-input { width: 100%; padding: 6px 10px; font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 1.5; border: 1px solid var(--color-hairline, #d4cfc4); border-radius: 4px; background: var(--color-input-fill, #fff); color: var(--color-ink, #1c1917); } .ds-input::placeholder { color: var(--color-ink-placeholder, #78716c); } .ds-input:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-chrome, #f7f5f0), 0 0 0 4px var(--color-accent, #1e3a5f); }"
+    },
+    {
+      "name": "Map list tabs",
+      "kind": "nav",
+      "refersTo": "tab",
+      "description": "Context / Tickets. Active is navy stroke plus wash, not a filled tab.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab\" type=\"button\">Context</button><button class=\"ds-tab is-active\" type=\"button\">Tickets</button></div>",
+      "css": ".ds-tabs { display: flex; gap: 4px; } .ds-tab { flex: 1; padding: 4px 8px; font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 600; line-height: 1.35; border: 1px solid var(--color-hairline, #d4cfc4); border-radius: 3px; background: transparent; color: var(--color-ink-muted, #57534e); cursor: pointer; } .ds-tab.is-active { border-color: var(--color-accent, #1e3a5f); color: var(--color-accent, #1e3a5f); background: var(--color-accent-wash, rgba(30, 58, 95, 0.1)); } .ds-tab:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-chrome, #f7f5f0), 0 0 0 4px var(--color-accent, #1e3a5f); }"
+    },
+    {
+      "name": "Status mark",
+      "kind": "chip",
+      "refersTo": "chip-accent",
+      "description": "Frontier and Spec marks. Kind/claimed use hairline and muted ink instead.",
+      "html": "<span class=\"ds-mark ds-mark-accent\">Frontier</span> <span class=\"ds-mark\">Language</span>",
+      "css": ".ds-mark { display: inline-block; padding: 1px 4px; font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; font-size: 10px; font-weight: 600; line-height: 1.4; letter-spacing: 0.03em; text-transform: uppercase; border: 1px solid var(--color-hairline, #d4cfc4); border-radius: 3px; color: var(--color-ink-muted, #57534e); } .ds-mark-accent { border-color: var(--color-accent, #1e3a5f); color: var(--color-accent, #1e3a5f); }"
+    },
+    {
+      "name": "Map row",
+      "kind": "custom",
+      "refersTo": "map-row",
+      "description": "A Map list row. Selected is navy wash; hover is a 4% ink veil.",
+      "html": "<button class=\"ds-map-row selected\" type=\"button\"><span class=\"ds-map-title\">Ship paste preview in the reader</span><span class=\"ds-map-path\">.scratch/paste-preview/issues/02-ship-paste-preview-in-the-reader.md</span></button>",
+      "css": ".ds-map-row { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 8px; border: 0; border-radius: 3px; background: transparent; color: var(--color-ink, #1c1917); font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 1.35; text-align: left; cursor: pointer; } .ds-map-row:hover { background: rgba(28, 25, 23, 0.04); } .ds-map-row.selected { background: var(--color-accent-wash, rgba(30, 58, 95, 0.1)); } .ds-map-row:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-chrome, #f7f5f0), 0 0 0 4px var(--color-accent, #1e3a5f); } .ds-map-title { font-weight: 600; } .ds-map-path { color: var(--color-ink-muted, #57534e); font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }"
+    },
+    {
+      "name": "Term hint slip",
+      "kind": "card",
+      "refersTo": "term-hint-card",
+      "description": "The only lifted surface. Dotted ink in the preview; this slip is hover chrome.",
+      "html": "<div class=\"ds-hint\"><span class=\"ds-hint-kicker\">Term</span><p><strong>Map</strong> — a Wayfinder index of remaining work in this Project.</p></div>",
+      "css": ".ds-hint { max-width: 24rem; padding: 10px 12px 16px; background: var(--color-paper, #f4efe6); color: var(--color-ink, #1c1917); border: 1px solid var(--color-hairline, #d4cfc4); border-radius: 4px; box-shadow: 0 12px 28px rgba(28, 25, 23, 0.12); font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif; font-size: 14px; line-height: 1.45; } .ds-hint-kicker { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-ink-muted, #57534e); } .ds-hint p { margin: 0; } .ds-hint strong { font-weight: 600; }"
+    },
+    {
+      "name": "Preview",
+      "kind": "custom",
+      "refersTo": "preview",
+      "description": "GFM on Laid Paper. Serif reads; measure is 72ch.",
+      "html": "<article class=\"ds-preview\"><h1>Remaining work</h1><p>The Reader shows Wayfinder maps that live on disk. Success is understanding a <a href=\"#\">Map</a> or a <span class=\"ds-term\">Term</span> without leaving.</p><p>Use <code>Load</code> once. Copy stays outline navy.</p></article>",
+      "css": ".ds-preview { max-width: 72ch; padding: 24px 0; background: var(--color-paper, #f4efe6); color: var(--color-ink, #1c1917); font-family: 'Source Serif 4', ui-serif, Georgia, serif; font-size: 16px; line-height: 1.65; } .ds-preview h1 { margin: 0 0 0.4em; font-size: 1.75em; font-weight: 600; line-height: 1.25; } .ds-preview p { margin: 0 0 1em; } .ds-preview a { color: var(--color-accent, #1e3a5f); text-decoration: underline; text-underline-offset: 2px; } .ds-preview a:hover { color: var(--color-accent-hover, #254a75); } .ds-preview code { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.88em; background: var(--color-code-bg, #e8e3d8); padding: 0.15em 0.35em; border-radius: 3px; } .ds-term { text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 0.18em; cursor: help; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Reading Desk",
+    "overview": "Warm, quiet, workmanlike. Chrome recedes so the operator can stay in remaining work, a Map, or a Term. Personality lives in paper, ink, and navy, and in the serif/sans split — not in decoration.\n\nThe desk is a split surface: a stone **Map list** on the left, laid paper on the right. Source Serif 4 is what you read; Source Sans 3 is furniture (header, list, captions, controls). Chart Navy appears once as a filled Load. Copy, Paste, and Archive stay outline or ghost so they never compete with Load. Density is high in the list and generous on paper (72ch, 1.65 leading).\n\nThe shipped register is this light desk. Do not introduce a second world (cool OLED, different type, different chrome roles). Term hints stay in existing ink. The Map list is Sites and Efforts, not a file tree.",
+    "keyCharacteristics": [
+      "Warm paper / stone / pale chrome, one cool navy",
+      "Serif reads; sans operates",
+      "Flat at rest; hairlines and tone do the depth",
+      "One filled Load; every other action is quieter",
+      "Barely-there radii (3px / 4px)",
+      "Term hints are dotted ink, never a second color"
+    ],
+    "rules": [
+      { "name": "The One Load Rule", "body": "Chart Navy as a solid fill is Load, and only Load. Skip, Take, Paste, tabs, and chips may use navy as stroke or text. They never fill.", "section": "colors" },
+      { "name": "The Warm Desk Rule", "body": "Surfaces stay in the warm stone family. Do not cool the paper, chrome, or hairlines, and do not add a second accent hue.", "section": "colors" },
+      { "name": "The Split Voice Rule", "body": "Source Serif 4 is what you read. Source Sans 3 is what you operate. Do not set chrome in serif or running preview in sans, except the Paste composer (unrendered markdown) and preview placeholders.", "section": "typography" },
+      { "name": "The Occupied Pane Rule", "body": "Paste preview occupies the preview pane; it does not open a card, modal, or second column.", "section": "layout" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. The Term hint slip is the only drop shadow. Do not lift chrome, paper, or controls to “help” hierarchy.", "section": "elevation" },
+      { "name": "The Dotted Ink Rule", "body": "Term hints decorate the current sentence. They do not speckle the page with Chart Navy.", "section": "components" }
+    ],
+    "dos": [
+      "Do keep Load as the only Chart Navy fill on any given screen.",
+      "Do set GFM preview in Source Serif 4 at 16px / 1.65 on Laid Paper, 72ch.",
+      "Do set chrome, the Map list, and controls in Source Sans 3.",
+      "Do separate panes with Warm Hairline and tone (Pale Chrome / Stone Sidebar / Laid Paper).",
+      "Do mark Frontier with the inset 1px navy rule and the Frontier chip, not a glow.",
+      "Do honor prefers-reduced-motion: preview swap is 180ms opacity, or none."
+    ],
+    "donts": [
+      "Don't add a second filled navy control (Copy, Paste, tabs, chips, Archive).",
+      "Don't turn the Map list into a filesystem tree.",
+      "Don't color Term hints or give them a second underline style.",
+      "Don't introduce a cool-OLED world, a different type pairing, or new chrome roles.",
+      "Don't drop-shadow header, sidebar, paper, or buttons. The hint slip is the exception.",
+      "Don't card the preview or the Paste composer.",
+      "Don't use radii above 4px, pills, or display type."
+    ]
+  }
+}

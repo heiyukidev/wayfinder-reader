@@ -49,7 +49,7 @@ Product name is **Reader** (`wayfinder-reader`). On-screen title is `Reader`. Gl
 - Running product: `public/` (page, styles, client) and `src/` (Always-on Hono).
 - Product locks: `CONTEXT.md`; accepted ADRs in `docs/adr/` (0001–0018 as of this writing).
 - Always-on install/ops: `docs/always-on.md`.
-- In-repo scratch maps, issues, and prototypes under `.scratch/` (including paste-preview and dark-look in progress). Do not treat archived `.scratch/.archive/` issues as current UI contracts unless `CONTEXT.md` still cites them.
+- Local Wayfinder maps, issues, and prototypes under `.scratch/` (gitignored). Do not treat archived `.scratch/.archive/` issues as current UI contracts unless `CONTEXT.md` still cites them.
 - Hosted origin lock: GitHub Pages on `github.com/heiyukidev/wayfinder-reader`.
 - Absent: testimonials, customer quotes, benchmarks, pricing, and licensing claims. Future work must not fabricate them.
 

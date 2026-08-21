@@ -1,0 +1,33 @@
+{
+  "buildPath": "comp",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-radius",
+        "value": "999px",
+        "createdAt": "2026-08-20T17:22:01.710Z",
+        "reason": "Agent: prototype switcher is an intentional high-contrast pill so it is not mistaken for Reader chrome (prototype UI.md)"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(0, 0, 0, 0.4)",
+        "createdAt": "2026-08-20T17:22:01.748Z",
+        "reason": "Agent: prototype switcher shadow only; Reader desk stays flat-by-default with the Term hint slip as the sole lift"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "11px",
+        "createdAt": "2026-08-20T18:59:25.501Z",
+        "reason": "Agent: incumbent kicker/inherited-footer size already specified as 11px in DESIGN.md Term hint slip prose"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "13px",
+        "createdAt": "2026-08-20T18:59:25.553Z",
+        "reason": "Agent: incumbent preview pre/code size already shipped in public/styles.css; not part of the dark-register recast"
+      }
+    ]
+  }
+}
