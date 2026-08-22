@@ -13,6 +13,7 @@ const INDEX_HTML = path.join(PUBLIC, 'index.html')
 const STYLES_CSS = path.join(PUBLIC, 'styles.css')
 const CLIENT_JS = [
   path.join(PUBLIC, 'app.js'),
+  path.join(PUBLIC, 'always-on.js'),
   path.join(PUBLIC, 'term-hints.js'),
   path.join(PUBLIC, 'walk.js'),
   path.join(PUBLIC, 'recents.js'),
@@ -75,6 +76,10 @@ test('static assets are path-relative so a project-site origin still loads them'
   const app = fs.readFileSync(path.join(PUBLIC, 'app.js'), 'utf8')
 
   assert.match(html, /href=["']\.\/styles\.css(?:\?[^"']*)?["']/)
+  assert.match(html, /rel=["']icon["']/)
+  assert.match(html, /href=["']\.\/favicon\.svg["']/)
+  assert.doesNotMatch(html, /href=["']\/favicon/)
+  assert.ok(fs.existsSync(path.join(PUBLIC, 'favicon.svg')), 'public/favicon.svg must exist')
   assert.match(html, /src=["']\.\/app\.js["']/)
   assert.doesNotMatch(html, /href=["']\/styles\.css["']/)
   assert.doesNotMatch(html, /src=["']\/app\.js["']/)
@@ -98,12 +103,14 @@ test('index.html does not rely on classic lodash script unless ESM imports absen
 test('hosted Reader Load is a directory picker; Always-on path and Archive are feature-detected', () => {
   const html = fs.readFileSync(INDEX_HTML, 'utf8')
   const app = fs.readFileSync(path.join(PUBLIC, 'app.js'), 'utf8')
+  const alwaysOn = fs.readFileSync(path.join(PUBLIC, 'always-on.js'), 'utf8')
   assert.match(html, /id=["']project-path["']/)
   assert.match(html, /id=["']project-path["'][\s\S]*?\bhidden\b/)
   assert.doesNotMatch(html, />Archive</)
   assert.match(html, /id=["']load-btn["']/)
   assert.match(app, /showDirectoryPicker/)
-  assert.match(app, /\/api\/state/)
+  assert.match(app, /from ['"]\.\/always-on\.js['"]/)
+  assert.match(alwaysOn, /\/api\/state/)
   assert.match(app, /\/api\/project/)
   assert.match(app, /\/api\/tree/)
   assert.match(app, /\/api\/file/)

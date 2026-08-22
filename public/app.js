@@ -40,6 +40,7 @@ import {
   queryReadPermission,
 } from './recents.js'
 import { PENDING_MAP_BARS, pendingPreviewHtml } from './pending-load.js'
+import { detectAlwaysOn } from './always-on.js'
 
 marked.setOptions({ gfm: true })
 
@@ -141,18 +142,6 @@ async function api(url, options) {
     throw new Error(get(data, 'error') || `Request failed (${res.status})`)
   }
   return data
-}
-
-async function detectAlwaysOn() {
-  try {
-    const res = await fetch('/api/state', { headers: { Accept: 'application/json' } })
-    if (!res.ok) return null
-    const contentType = res.headers.get('content-type') || ''
-    if (!includes(contentType, 'json')) return null
-    return await res.json()
-  } catch {
-    return null
-  }
 }
 
 function showAlwaysOnChrome() {
