@@ -171,7 +171,7 @@ components:
 
 Warm, quiet, workmanlike. Chrome recedes so the operator can stay in remaining work, a Map, or a Term. Personality lives in paper, ink, and navy, and in the serif/sans split — not in decoration.
 
-The desk is a split surface: a stone **Map list** on the left, laid paper on the right. Literata is what you read; Source Sans 3 is furniture (header, list, captions, controls). Chart Navy appears once as a filled Load. Copy, Paste, and Archive stay outline or ghost so they never compete with Load. Density is high in the list and generous on paper (72ch, 1.7 leading).
+The desk is a split surface: a stone **Map list** on the left, laid paper on the right. Literata is what you read; Source Sans 3 is furniture (header, list, captions, controls). Chart Navy appears once as a filled Load. Copy, Paste, Archive, and Load again stay outline or ghost so they never compete with Load. Density is high in the list and generous on paper (72ch, 1.7 leading).
 
 The shipped register is this dark desk. Do not introduce a second world (cool OLED, different type, different chrome roles) or a light revert. Term hints stay in existing ink. The Map list is Sites and Efforts, not a file tree.
 
@@ -192,7 +192,7 @@ A night stone desk with a single cool accent. Neutrals do the room; Chart Navy d
 
 - **Chart Navy** (`accent`): The only filled action (Load). Rarity is the point. Fill stays `#1e3a5f` even though it recedes on dark paper.
 - **Chart Navy Hover** (`accent-hover`): Load hover only.
-- **Accent Ink** (`accent-ink`): On-dark strokes, links, Skip/Take/Paste, Spec/Frontier marks, active tabs, caret, and the focus ring. Not a second fill.
+- **Accent Ink** (`accent-ink`): On-dark strokes, links, Skip/Take/Paste/Load again, Spec/Frontier marks, active tabs, caret, and the focus ring. Not a second fill.
 - **Accent Ink Hover** (`accent-ink-hover`): Link hover and pressed outline stroke.
 - **Chart Navy Wash** (`accent-wash`): Selected map row, pressed outline, active tab fill, composer selection. A veil — never a second solid fill.
 - **Accent Pressed** (`accent-pressed`): Stronger veil on outline press.
@@ -214,7 +214,7 @@ A night stone desk with a single cool accent. Neutrals do the room; Chart Navy d
 
 Error and empty banners use their own warm rose and straw trio (`error-*`, `empty-*`). They are status paper, not a second accent.
 
-**The One Load Rule.** Chart Navy as a solid fill is Load, and only Load. Skip, Take, Paste, tabs, and chips use Accent Ink as stroke or text. They never fill.
+**The One Load Rule.** Chart Navy as a solid fill is Load, and only Load. Skip, Take, Paste, Load again, tabs, and chips use Accent Ink as stroke or text. They never fill.
 
 **The Warm Desk Rule.** Surfaces stay in the warm stone family. Do not cool the paper, chrome, or hairlines, and do not add a second accent hue.
 
@@ -272,13 +272,13 @@ No pills, no large radii, no clipped hero shapes. Blockquotes are a 1px left hai
 
 ## Components
 
-Quiet chrome, one filled Load. Outline navy for copy and paste; ghost for Archive and caption modes.
+Quiet chrome, one filled Load. Outline navy for copy, paste, and Load again; ghost for Archive and caption modes.
 
 ### Buttons
 
 - **Shape:** 4px radius on Load and outline; 3px on Archive.
 - **Primary (Load):** Chart Navy fill, Load Ink text, 6px 14px, chrome 14px / 500. Hover darkens to Chart Navy Hover. Disabled at 0.6 opacity. The only solid fill on the desk.
-- **Outline (Copy Skip, Copy Take, Paste):** Transparent, Accent Ink stroke and text, 12px / 500, min-height 28px, 4px 8px. Hover = Chart Navy Wash. Pressed = Accent Pressed veil and Accent Ink Hover stroke. Paste pressed (`aria-pressed`) keeps the wash. Disabled Paste at 0.45 opacity.
+- **Outline (Copy Skip, Copy Take, Paste, Load again):** Transparent, Accent Ink stroke and text. Copy and Paste are 12px / 500, min-height 28px, 4px 8px. Load again sits in the header at Load’s 6px 14px / 14px chrome so the pair shares a row without sharing a fill. Hover = Chart Navy Wash. Pressed = Accent Pressed veil and Accent Ink Hover stroke. Paste pressed (`aria-pressed`) keeps the wash. Disabled outline at 0.45 opacity.
 - **Ghost (Archive, caption mode):** No fill, no chrome stroke on caption mode; Archive is a 10px uppercase mark with a Warm Hairline. Hover darkens text toward Warm Ink; Archive hover adds Ink Wash. Caption mode “on” is 600, still not navy.
 - **Focus:** Shared focus ring. Never a thick rest outline.
 
@@ -328,7 +328,7 @@ Dotted underline in the existing ink (1px, 0.18em offset), `cursor: help`. No co
 
 ### Don't:
 
-- **Don't** add a second filled navy control (Copy, Paste, tabs, chips, Archive).
+- **Don't** add a second filled navy control (Copy, Paste, Load again, tabs, chips, Archive).
 - **Don't** turn the Map list into a filesystem tree.
 - **Don't** color Term hints or give them a second underline style.
 - **Don't** introduce a cool-OLED world, a light revert, or new chrome roles.

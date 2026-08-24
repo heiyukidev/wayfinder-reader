@@ -33,7 +33,7 @@ Confirmed:
 - Hosted Load identity is a **Directory handle** or a **Directory snapshot**; Always-on Load identity is a **Project path**. Safari is not a hosted browser.
 - Hosted never writes the Project. Always-on may **Archive** a **Finished** Effort (`fs.rename` into `.scratch/.archive/`). No Archive list and no Restore.
 - Skip prompt and Take prompt are clipboard copies only; the pasted session writes the Project.
-- **Unresolved filter** is session-only. **Paste preview** is session memory, never written, cleared on Load.
+- **Unresolved filter** is session-only. **Paste preview** is session memory, never written, cleared on Load. **Load again** re-walks the current Project without a new Load identity; it is not a watch and is not available on **Directory snapshot**.
 - Readable content is Wayfinder-shaped: Sites, language documents, ADRs, Out-of-scope records, Effort maps/specs/tickets, in-`.scratch/` preview targets. Not source, `.git`, `node_modules`, or secrets.
 - Stack is locked: hosted is static HTML/JS; Always-on is Hono serving the same `public/` plus project APIs. No Electron; no Vite/Next at runtime.
 - Domain vocabulary in `CONTEXT.md` and the ADRs under `docs/adr/` are product locks.

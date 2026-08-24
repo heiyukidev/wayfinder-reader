@@ -17,6 +17,7 @@ const CLIENT_JS = [
   path.join(PUBLIC, 'term-hints.js'),
   path.join(PUBLIC, 'walk.js'),
   path.join(PUBLIC, 'recents.js'),
+  path.join(PUBLIC, 'load-again.js'),
 ]
 
 const LODASH_IMPORT_RE = /from\s+['"]\.\/vendor\/lodash-es\/([^'"]+)['"]/g
@@ -108,6 +109,8 @@ test('hosted Reader Load is a directory picker; Always-on path and Archive are f
   assert.match(html, /id=["']project-path["'][\s\S]*?\bhidden\b/)
   assert.doesNotMatch(html, />Archive</)
   assert.match(html, /id=["']load-btn["']/)
+  assert.match(html, /id=["']load-again-btn["']/)
+  assert.match(html, /id=["']load-again-btn["'][\s\S]*?\bhidden\b/)
   assert.match(app, /showDirectoryPicker/)
   assert.match(app, /from ['"]\.\/always-on\.js['"]/)
   assert.match(alwaysOn, /\/api\/state/)
@@ -117,6 +120,19 @@ test('hosted Reader Load is a directory picker; Always-on path and Archive are f
   assert.match(app, /\/api\/archive/)
   assert.match(app, /archiveEffort/)
   assert.match(app, /detectAlwaysOn/)
+  assert.match(app, /from ['"]\.\/load-again\.js['"]/)
+  assert.match(app, /function loadAgain/)
+})
+
+test('Load again is outline Accent Ink, not a second filled Load', () => {
+  const css = fs.readFileSync(STYLES_CSS, 'utf8')
+  assert.match(css, /#load-again-btn/)
+  assert.match(css, /#load-again-btn \{[\s\S]*?background: transparent/)
+  assert.match(css, /#load-again-btn \{[\s\S]*?color: var\(--color-accent-ink\)/)
+  assert.doesNotMatch(
+    css,
+    /#load-again-btn \{[^}]*background: var\(--color-accent\)/,
+  )
 })
 
 test('pending Load occupies the desk; file switch does not say Loading…', () => {
