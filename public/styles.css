@@ -210,6 +210,44 @@ body {
   box-shadow: var(--focus-ring);
 }
 
+#load-again-btn {
+  padding: 6px 14px;
+  font: inherit;
+  font-weight: 500;
+  border: 1px solid var(--color-accent-ink);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-accent-ink);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--transition-swap),
+    border-color var(--transition-swap);
+}
+
+#load-again-btn:hover:not(:disabled) {
+  background: var(--color-accent-wash);
+}
+
+#load-again-btn:active:not(:disabled) {
+  border-color: var(--color-accent-ink-hover);
+  background: var(--color-accent-pressed);
+}
+
+#load-again-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#load-again-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+#load-again-btn[hidden] {
+  display: none;
+}
+
 #recents {
   min-width: 140px;
   max-width: 220px;

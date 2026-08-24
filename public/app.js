@@ -41,12 +41,14 @@ import {
 } from './recents.js'
 import { PENDING_MAP_BARS, pendingPreviewHtml } from './pending-load.js'
 import { detectAlwaysOn } from './always-on.js'
+import { canLoadAgain, shouldKeepPreview } from './load-again.js'
 
 marked.setOptions({ gfm: true })
 
 const projectPathLabel = document.querySelector('label[for="project-path"]')
 const projectInput = document.getElementById('project-path')
 const loadBtn = document.getElementById('load-btn')
+const loadAgainBtn = document.getElementById('load-again-btn')
 const projectNameEl = document.getElementById('project-name')
 const recentsLabel = document.querySelector('label[for="recents"]')
 const recentsSelect = document.getElementById('recents')
@@ -98,6 +100,33 @@ let pasteSession = createPasteSession()
 let fileRequestId = 0
 let projectRequestId = 0
 let loadPending = false
+let projectBusy = false
+
+function syncLoadAgainChrome() {
+  const available = canLoadAgain({
+    alwaysOn,
+    projectPath: currentProjectPath,
+    hostedHandleLoad,
+    rootHandle: currentRootHandle,
+  })
+  loadAgainBtn.hidden = !available
+  loadAgainBtn.disabled = !available || projectBusy || loadPending
+}
+
+function setProjectBusy(busy) {
+  projectBusy = busy
+  loadBtn.disabled = busy
+  syncLoadAgainChrome()
+}
+
+function pruneSelectedTickets() {
+  const liveTicketPaths = flatten(
+    map(currentDecisions, (group) => map(get(group, 'tickets', []), 'path')),
+  )
+  selectedTicketPaths = filter(selectedTicketPaths, (ticketPath) =>
+    includes(liveTicketPaths, ticketPath),
+  )
+}
 
 function showError(message) {
   if (!message) {
@@ -204,6 +233,7 @@ function showEmptyPreview() {
   previewEl.innerHTML = emptyPreviewHtml()
   paintCaption()
   updateCopyControl()
+  syncLoadAgainChrome()
 }
 
 function setPreviewBusy(busy) {
@@ -299,6 +329,7 @@ function beginPendingLoad(projectLabel) {
   showPendingPreview()
   paintCaption()
   updateCopyControl()
+  syncLoadAgainChrome()
 }
 
 function applyPreviewTermHints(previewPath) {
@@ -831,7 +862,7 @@ async function selectFile(relPath) {
     if (wasPending) {
       renderPreviewContent(data, relPath)
       setPreviewBusy(false)
-      return
+      return true
     }
 
     previewEl.classList.add('is-swapping')
@@ -842,12 +873,14 @@ async function selectFile(relPath) {
       previewEl.classList.remove('is-swapping')
       setPreviewBusy(false)
     })
+    return true
   } catch (err) {
     if (requestId !== fileRequestId) return
     endPendingLoad()
     previewEl.classList.remove('is-loading', 'is-swapping', 'preview-empty', 'preview-pending')
     previewEl.innerHTML = `<p class="no-preview">${escapeHtml(err.message)}</p>`
     setPreviewBusy(false)
+    return false
   }
 }
 
@@ -891,6 +924,7 @@ function applyProjectData(data, handle) {
     size(currentLanguage) > 0
   renderMapList()
   updateCopyControl()
+  syncLoadAgainChrome()
 }
 
 function firstPreviewPath() {
@@ -917,12 +951,7 @@ async function archiveEffort(slug) {
       body: JSON.stringify({ slug }),
     })
     applyProjectData(data)
-    const liveTicketPaths = flatten(
-      map(currentDecisions, (group) => map(get(group, 'tickets', []), 'path')),
-    )
-    selectedTicketPaths = filter(selectedTicketPaths, (ticketPath) =>
-      includes(liveTicketPaths, ticketPath),
-    )
+    pruneSelectedTickets()
     updateCopyControl()
     const prefix = `.scratch/${slug}/`
     if (
@@ -949,12 +978,46 @@ async function applyLoadedProject(data) {
   }
 }
 
-async function loadProject(projectPath) {
+async function applyLoadAgain(data, handle) {
+  const keepPath = selectedRelPath
+  pasteSession = markProjectLoaded()
+  applyProjectData(data, handle)
+  pruneSelectedTickets()
+  updateCopyControl()
+  if (shouldKeepPreview(keepPath, languagePaths())) {
+    const ok = await selectFile(keepPath)
+    if (ok === false) showEmptyPreview()
+    return
+  }
+  showEmptyPreview()
+}
+
+async function loadAgain() {
+  if (
+    !canLoadAgain({
+      alwaysOn,
+      projectPath: currentProjectPath,
+      hostedHandleLoad,
+      rootHandle: currentRootHandle,
+    })
+  ) {
+    return
+  }
+  if (alwaysOn) {
+    await loadProject(currentProjectPath, { again: true })
+    return
+  }
+  await loadFromHandle(currentRootHandle, { remember: true, again: true })
+}
+
+async function loadProject(projectPath, options = {}) {
+  const again = get(options, 'again', false)
   const requestId = ++projectRequestId
   ++fileRequestId
-  loadBtn.disabled = true
+  setProjectBusy(true)
   showError('')
-  beginPendingLoad()
+  if (!again) beginPendingLoad()
+  else layoutEl.setAttribute('aria-busy', 'true')
   try {
     const data = await api('/api/project', {
       method: 'POST',
@@ -962,7 +1025,8 @@ async function loadProject(projectPath) {
       body: JSON.stringify({ path: projectPath }),
     })
     if (requestId !== projectRequestId) return
-    await applyLoadedProject(data)
+    if (again) await applyLoadAgain(data)
+    else await applyLoadedProject(data)
     if (requestId !== projectRequestId) return
     const state = await api('/api/state')
     if (requestId !== projectRequestId) return
@@ -970,10 +1034,11 @@ async function loadProject(projectPath) {
   } catch (err) {
     if (requestId !== projectRequestId) return
     showError(err.message)
-    showEmptyPreview()
+    if (!again) showEmptyPreview()
   } finally {
     if (requestId === projectRequestId) {
-      loadBtn.disabled = false
+      if (again) layoutEl.removeAttribute('aria-busy')
+      setProjectBusy(false)
     }
   }
 }
@@ -981,7 +1046,7 @@ async function loadProject(projectPath) {
 async function restoreTree() {
   const requestId = ++projectRequestId
   ++fileRequestId
-  loadBtn.disabled = true
+  setProjectBusy(true)
   showError('')
   beginPendingLoad()
   try {
@@ -995,32 +1060,37 @@ async function restoreTree() {
     showEmptyPreview()
   } finally {
     if (requestId === projectRequestId) {
-      loadBtn.disabled = false
+      setProjectBusy(false)
     }
   }
 }
 
 async function loadFromHandle(handle, options = {}) {
   const remember = get(options, 'remember', true)
+  const again = get(options, 'again', false)
   const requestId = ++projectRequestId
   ++fileRequestId
-  loadBtn.disabled = true
+  setProjectBusy(true)
   showError('')
-  beginPendingLoad(get(handle, 'name', ''))
+  if (!again) beginPendingLoad(get(handle, 'name', ''))
+  else layoutEl.setAttribute('aria-busy', 'true')
   try {
     const data = await walkProject(handle)
     if (requestId !== projectRequestId) return
-    pasteSession = markProjectLoaded()
-    resetUnresolvedFilter()
-    applyProjectData(data, handle)
-    hostedHandleLoad = remember
-
-    const previewPath = firstPreviewPath()
-    if (previewPath) {
-      await selectFile(previewPath)
-      if (requestId !== projectRequestId) return
+    if (again) {
+      await applyLoadAgain(data, handle)
     } else {
-      showEmptyPreview()
+      pasteSession = markProjectLoaded()
+      resetUnresolvedFilter()
+      hostedHandleLoad = remember
+      applyProjectData(data, handle)
+      const previewPath = firstPreviewPath()
+      if (previewPath) {
+        await selectFile(previewPath)
+        if (requestId !== projectRequestId) return
+      } else {
+        showEmptyPreview()
+      }
     }
 
     if (!remember) return
@@ -1030,10 +1100,11 @@ async function loadFromHandle(handle, options = {}) {
   } catch (err) {
     if (requestId !== projectRequestId) return
     showError(err.message)
-    showEmptyPreview()
+    if (!again) showEmptyPreview()
   } finally {
     if (requestId === projectRequestId) {
-      loadBtn.disabled = false
+      if (again) layoutEl.removeAttribute('aria-busy')
+      setProjectBusy(false)
     }
   }
 }
@@ -1140,6 +1211,10 @@ loadBtn.addEventListener('click', () => {
     return
   }
   pickProject()
+})
+
+loadAgainBtn.addEventListener('click', () => {
+  loadAgain()
 })
 
 projectInput.addEventListener('keydown', (event) => {

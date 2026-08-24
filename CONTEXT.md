@@ -11,6 +11,8 @@ Viewer for Wayfinder maps that live on the visitor’s disk.
 - **Directory snapshot** — Load identity on the hosted origin when the browser cannot grant a **Directory handle**: a one-shot folder pick held in the session. Not recents. Not a standing permission. Not a **Project path**. Safari is out: that pick can omit `.scratch`. Locked in [ADR 0018](docs/adr/0018-hosted-directory-snapshot-fallback.md).
   _Avoid_: Directory handle, Project path, FileList, webkitdirectory (when you mean this identity)
 - **Project path** — Load identity on **Always-on**: the absolute POSIX path typed or pasted and stored on the server (`~/.wayfinder-reader/state.json`, last path + recents). Not Load on the hosted origin.
+- **Load again** — Re-walks the already Loaded **Project** without choosing a new **Directory handle**, **Directory snapshot**, or **Project path**. Same Load identity as the current walk. Not a filesystem watch. Not available on **Directory snapshot**.
+  _Avoid_: Reload, Refresh, Reindex
 - **Site** — A directory inside the **Project** that owns `CONTEXT.md` and/or `.scratch/`. The Project root is a Site when it has either marker. `CONTEXT.md` inside an **Effort** is not a Site. A Site may have language, a tracker, or both.
   _Avoid_: folder, package, nested project, bare repository (when you mean this unit)
 - **Site lineage** — The chain of **Sites** that contain a previewed path, closest owner first, Project root last. Containment is directory membership, walk up only. Siblings, cousins, and descendants are out. Identity is the Site’s path in the Project, not display title.
