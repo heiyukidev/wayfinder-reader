@@ -34,6 +34,14 @@ import {
 
 const SKIP_DIRS = new Set(['node_modules', '.git'])
 
+// A Site's glossary and the Project's map, newest name first. Older Projects still use the legacy names.
+const GLOSSARY_NAMES = ['GLOSSARY.md', 'CONTEXT.md']
+const MAP_NAMES = ['GLOSSARY-MAP.md', 'CONTEXT-MAP.md']
+
+function glossaryNameIn(names) {
+  return find(GLOSSARY_NAMES, (name) => includes(names, name))
+}
+
 function isHiddenDir(name) {
   return name.startsWith('.') && name !== '.scratch'
 }
@@ -53,14 +61,13 @@ function looksLikeEffort(names) {
 
 function isSiteFromNames(names) {
   if (includes(names, '.scratch')) return true
-  return includes(names, 'CONTEXT.md') && !looksLikeEffort(names)
+  return Boolean(glossaryNameIn(names)) && !looksLikeEffort(names)
 }
 
 function languagePathRel(filePath) {
-  if (filePath === 'CONTEXT.md' || filePath === 'CONTEXT-MAP.md') return '.'
-  if (filePath.endsWith('/CONTEXT.md')) return filePath.slice(0, -'/CONTEXT.md'.length)
-  if (filePath.endsWith('/CONTEXT-MAP.md')) return filePath.slice(0, -'/CONTEXT-MAP.md'.length)
-  return '.'
+  const base = path.posix.basename(filePath)
+  if (!includes(GLOSSARY_NAMES, base) && !includes(MAP_NAMES, base)) return '.'
+  return path.posix.dirname(filePath)
 }
 
 function huntSites(projectPath) {
@@ -69,10 +76,10 @@ function huntSites(projectPath) {
     const entries = readDirEntries(absPath)
     const names = map(entries, 'name')
     if (isSiteFromNames(names)) {
-      const contextFile = path.join(absPath, 'CONTEXT.md')
+      const glossaryName = glossaryNameIn(names)
       let title = rel || path.basename(projectPath)
-      if (fs.existsSync(contextFile)) {
-        title = readHeading(readText(contextFile)) || title
+      if (glossaryName) {
+        title = readHeading(readText(path.join(absPath, glossaryName))) || title
       }
       sites.push({ rel: rel || '.', title })
     }
@@ -413,8 +420,8 @@ function cleanHref(raw) {
   return replace(trim(get(split(trim(raw), /\s+/), 0, '')), /['"]/g, '')
 }
 
-function isContextMdHref(href) {
-  return Boolean(href) && !includes(href, '..') && path.basename(href) === 'CONTEXT.md'
+function isGlossaryHref(href) {
+  return Boolean(href) && !includes(href, '..') && includes(GLOSSARY_NAMES, path.basename(href))
 }
 
 function tableCellName(content, index) {
@@ -440,7 +447,7 @@ function mappedContextCandidates(mapContent) {
       href: trim(get(match, 1, '')),
     })),
   )
-  return filter(sortBy(matches, 'index'), (candidate) => isContextMdHref(get(candidate, 'href')))
+  return filter(sortBy(matches, 'index'), (candidate) => isGlossaryHref(get(candidate, 'href')))
 }
 
 function resolveProjectFile(projectPath, projectReal, absPath) {
@@ -466,8 +473,16 @@ function resolveNamedRootFile(projectPath, projectReal, basename) {
   return file
 }
 
+function resolveFirstRootFile(projectPath, projectReal, basenames) {
+  for (const basename of basenames) {
+    const file = resolveNamedRootFile(projectPath, projectReal, basename)
+    if (file) return file
+  }
+  return null
+}
+
 function resolveHrefFile(projectPath, projectReal, href) {
-  if (!isContextMdHref(href)) return null
+  if (!isGlossaryHref(href)) return null
   return resolveProjectFile(projectPath, projectReal, path.resolve(projectPath, href))
 }
 
@@ -572,7 +587,7 @@ function listLanguageDocs(projectPath) {
     })
   }
 
-  const mapFile = resolveNamedRootFile(projectPath, projectReal, 'CONTEXT-MAP.md')
+  const mapFile = resolveFirstRootFile(projectPath, projectReal, MAP_NAMES)
   if (mapFile) {
     pushFile(mapFile, '')
     forEach(mappedContextCandidates(get(mapFile, 'content', '')), (candidate) => {
@@ -583,7 +598,7 @@ function listLanguageDocs(projectPath) {
     })
   }
 
-  pushFile(resolveNamedRootFile(projectPath, projectReal, 'CONTEXT.md'), '')
+  pushFile(resolveFirstRootFile(projectPath, projectReal, GLOSSARY_NAMES), '')
 
   return {
     language: map(language, (row) => ({
@@ -602,7 +617,7 @@ function listLanguageDocs(projectPath) {
 }
 
 function contextMapAdrDirs(projectPath, projectReal) {
-  const mapFile = resolveNamedRootFile(projectPath, projectReal, 'CONTEXT-MAP.md')
+  const mapFile = resolveFirstRootFile(projectPath, projectReal, MAP_NAMES)
   if (!mapFile) return []
   return filter(
     map(mappedContextCandidates(get(mapFile, 'content', '')), (candidate) => {

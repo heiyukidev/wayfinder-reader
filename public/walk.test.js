@@ -241,6 +241,35 @@ test('CONTEXT-MAP titles and orders nested Sites; unlisted Site still appears', 
   assert.equal(get(nav, 'path'), 'apps/web/.scratch/nav/map.md')
 })
 
+test('GLOSSARY-MAP and GLOSSARY.md make Sites; GLOSSARY.md wins over a legacy CONTEXT.md beside it', async () => {
+  const root = dirHandle('monorepo', [
+    fileHandle(
+      'GLOSSARY-MAP.md',
+      '# Glossary Map\n\n- [Mobile](./apps/mobile/GLOSSARY.md)\n- [Legacy](./apps/legacy/CONTEXT.md)\n',
+    ),
+    fileHandle('GLOSSARY.md', '# Root\n\n## Language\n\n**Site**:\nA directory.\n'),
+    fileHandle('CONTEXT.md', '# Stale root\n'),
+    dirHandle('apps', [
+      dirHandle('mobile', [
+        fileHandle('GLOSSARY.md', '# Mobile heading\n\n## Language\n\n**Tab**:\nA screen.\n'),
+      ]),
+      dirHandle('legacy', [fileHandle('CONTEXT.md', '# Legacy heading\n')]),
+    ]),
+  ])
+
+  const walked = await walkProject(root)
+  assert.deepEqual(map(walked.language, 'path'), [
+    'GLOSSARY-MAP.md',
+    'apps/mobile/GLOSSARY.md',
+    'apps/legacy/CONTEXT.md',
+    'GLOSSARY.md',
+  ])
+  assert.deepEqual(map(walked.language, 'title'), ['Glossary Map', 'Mobile', 'Legacy', 'Root'])
+  assert.deepEqual(get(find(walked.sites, (site) => site.rel === '.'), 'markers'), ['GLOSSARY.md'])
+  assert.equal(get(find(walked.terms, (record) => record.term === 'Tab'), 'rel'), 'apps/mobile')
+  assert.equal(get(find(walked.terms, (record) => record.term === 'Site'), 'rel'), '.')
+})
+
 test('terms carry the owning Site rel', async () => {
   const root = dirHandle('repo', [
     fileHandle('CONTEXT.md', '# Root\n\n## Language\n\n**Site**:\nA directory.\n'),
