@@ -36,20 +36,20 @@ Confirmed:
 - **Unresolved filter** is session-only. **Paste preview** is session memory, never written, cleared on Load. **Load again** re-walks the current Project without a new Load identity; it is not a watch and is not available on **Directory snapshot**.
 - Readable content is Wayfinder-shaped: Sites, language documents, ADRs, Out-of-scope records, Effort maps/specs/tickets, in-`.scratch/` preview targets. Not source, `.git`, `node_modules`, or secrets.
 - Stack is locked: hosted is static HTML/JS; Always-on is Hono serving the same `public/` plus project APIs. No Electron; no Vite/Next at runtime.
-- Domain vocabulary in `CONTEXT.md` and the ADRs under `docs/adr/` are product locks.
+- Domain vocabulary in `GLOSSARY.md` and the ADRs under `docs/adr/` are product locks.
 
 Undecided: none recorded this init. No extra audience, brand, or accessibility constraint beyond those locks.
 
 ## Brand Commitments
 
-Product name is **Reader** (`wayfinder-reader`). On-screen title is `Reader`. Glossary terms in `CONTEXT.md` are binding vocabulary for UI copy and future work.
+Product name is **Reader** (`wayfinder-reader`). On-screen title is `Reader`. Glossary terms in `GLOSSARY.md` are binding vocabulary for UI copy and future work.
 
 ## Evidence on Hand
 
 - Running product: `public/` (page, styles, client) and `src/` (Always-on Hono).
-- Product locks: `CONTEXT.md`; accepted ADRs in `docs/adr/` (0001–0018 as of this writing).
+- Product locks: `GLOSSARY.md`; accepted ADRs in `docs/adr/` (0001–0018 as of this writing).
 - Always-on install/ops: `docs/always-on.md`.
-- Local Wayfinder maps, issues, and prototypes under `.scratch/` (gitignored). Do not treat archived `.scratch/.archive/` issues as current UI contracts unless `CONTEXT.md` still cites them.
+- Local Wayfinder maps, issues, and prototypes under `.scratch/` (gitignored). Do not treat archived `.scratch/.archive/` issues as current UI contracts unless `GLOSSARY.md` still cites them.
 - Hosted origin lock: GitHub Pages on `github.com/heiyukidev/wayfinder-reader`.
 - Absent: testimonials, customer quotes, benchmarks, pricing, and licensing claims. Future work must not fabricate them.
 

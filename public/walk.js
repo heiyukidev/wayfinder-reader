@@ -32,6 +32,22 @@ import uniqBy from './vendor/lodash-es/uniqBy.js'
 const SKIP_DIRS = new Set(['node_modules', '.git'])
 const MARKDOWN_EXTS = new Set(['md', 'markdown', 'mdown', 'mkd'])
 
+// A Site's glossary and the Project's map, newest name first. Older Projects still use the legacy names.
+const GLOSSARY_NAMES = ['GLOSSARY.md', 'CONTEXT.md']
+const MAP_NAMES = ['GLOSSARY-MAP.md', 'CONTEXT-MAP.md']
+
+function glossaryNameIn(names) {
+  return find(GLOSSARY_NAMES, (name) => includes(names, name))
+}
+
+function firstFileNamed(children, names) {
+  for (const name of names) {
+    const file = find(children, (child) => child.kind === 'file' && child.name === name)
+    if (file) return file
+  }
+  return undefined
+}
+
 export function hostedLoadMode(flags) {
   if (get(flags, 'isSafari')) return 'unsupported'
   if (get(flags, 'hasDirectoryPicker')) return 'handle'
@@ -168,13 +184,13 @@ function looksLikeEffort(names) {
 
 export function isSiteFromNames(names) {
   if (includes(names, '.scratch')) return true
-  return includes(names, 'CONTEXT.md') && !looksLikeEffort(names)
+  return Boolean(glossaryNameIn(names)) && !looksLikeEffort(names)
 }
 
 export function markersFromNames(names) {
   return filter(
     [
-      includes(names, 'CONTEXT.md') ? 'CONTEXT.md' : '',
+      glossaryNameIn(names) || '',
       includes(names, '.scratch') ? '.scratch/' : '',
     ],
     Boolean,
@@ -197,8 +213,8 @@ function cleanHref(raw) {
   return replace(trim(get(split(trim(raw), /\s+/), 0, '')), /['"]/g, '')
 }
 
-function isContextMdHref(href) {
-  return Boolean(href) && !includes(href, '..') && last(relParts(href)) === 'CONTEXT.md'
+function isGlossaryHref(href) {
+  return Boolean(href) && !includes(href, '..') && includes(GLOSSARY_NAMES, last(relParts(href)))
 }
 
 function tableCellName(content, index) {
@@ -224,11 +240,11 @@ function mappedContextCandidates(mapContent) {
       href: trim(get(match, 1, '')),
     })),
   )
-  return filter(sortBy(matches, 'index'), (candidate) => isContextMdHref(get(candidate, 'href')))
+  return filter(sortBy(matches, 'index'), (candidate) => isGlossaryHref(get(candidate, 'href')))
 }
 
 function siteRelFromHref(href) {
-  if (!isContextMdHref(href)) return null
+  if (!isGlossaryHref(href)) return null
   const parent = join(dropRight(relParts(href)), '/')
   return parent || '.'
 }
@@ -560,15 +576,15 @@ async function readSite(site) {
   const { handle, rel, children, markers, mapTitle } = site
   const language = []
   if (rel !== '.') {
-    const contextMap = find(children, (child) => child.kind === 'file' && child.name === 'CONTEXT-MAP.md')
+    const contextMap = firstFileNamed(children, MAP_NAMES)
     if (contextMap) {
       const content = await readFileText(contextMap)
       language.push(
-        languageRow(readHeading(content), joinRel(rel, 'CONTEXT-MAP.md'), content, ''),
+        languageRow(readHeading(content), joinRel(rel, contextMap.name), content, ''),
       )
     }
   }
-  const contextFile = find(children, (child) => child.kind === 'file' && child.name === 'CONTEXT.md')
+  const contextFile = firstFileNamed(children, GLOSSARY_NAMES)
   let contextTitle = ''
   if (contextFile) {
     const content = await readFileText(contextFile)
@@ -576,7 +592,7 @@ async function readSite(site) {
     language.push(
       languageRow(
         contextTitle,
-        joinRel(rel === '.' ? '' : rel, 'CONTEXT.md'),
+        joinRel(rel === '.' ? '' : rel, contextFile.name),
         content,
         mapTitle,
       ),
@@ -603,19 +619,15 @@ function languageRel(path, sites) {
     some(get(site, 'language', []), (doc) => get(doc, 'path') === path),
   )
   if (owner) return get(owner, 'rel')
-  if (path === 'CONTEXT-MAP.md' || path === 'CONTEXT.md') return '.'
-  if (path.endsWith('/CONTEXT.md')) return path.slice(0, -'/CONTEXT.md'.length)
-  if (path.endsWith('/CONTEXT-MAP.md')) return path.slice(0, -'/CONTEXT-MAP.md'.length)
-  return '.'
+  const parts = relParts(path)
+  if (!includes(GLOSSARY_NAMES, last(parts)) && !includes(MAP_NAMES, last(parts))) return '.'
+  return join(dropRight(parts), '/') || '.'
 }
 
 export async function walkProject(rootHandle) {
   const found = await huntSites(rootHandle)
   const rootChildren = await collectChildren(rootHandle)
-  const contextMapHandle = find(
-    rootChildren,
-    (child) => child.kind === 'file' && child.name === 'CONTEXT-MAP.md',
-  )
+  const contextMapHandle = firstFileNamed(rootChildren, MAP_NAMES)
   const contextMapContent = contextMapHandle ? await readFileText(contextMapHandle) : ''
   const ordered = orderSites(found, contextMapContent)
 
@@ -624,7 +636,7 @@ export async function walkProject(rootHandle) {
     language.push(
       languageRow(
         readHeading(contextMapContent),
-        'CONTEXT-MAP.md',
+        contextMapHandle.name,
         contextMapContent,
         '',
       ),

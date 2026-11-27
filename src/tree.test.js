@@ -707,6 +707,36 @@ test('CONTEXT-MAP.md lists the map and mapped CONTEXT files; illegal paths are o
   ])
 })
 
+test('GLOSSARY-MAP.md and GLOSSARY.md are read; GLOSSARY names win over legacy CONTEXT names', () => {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-language-glossary-'))
+  const mobileDir = path.join(project, 'apps', 'mobile')
+  const legacyDir = path.join(project, 'apps', 'legacy')
+  fs.mkdirSync(mobileDir, { recursive: true })
+  fs.mkdirSync(legacyDir, { recursive: true })
+  fs.writeFileSync(
+    path.join(project, 'GLOSSARY-MAP.md'),
+    '# Glossary Map\n\n- [Mobile](./apps/mobile/GLOSSARY.md)\n- [Legacy](./apps/legacy/CONTEXT.md)\n',
+  )
+  fs.writeFileSync(path.join(project, 'CONTEXT-MAP.md'), '# Stale map\n')
+  fs.writeFileSync(
+    path.join(mobileDir, 'GLOSSARY.md'),
+    '# Mobile\n\n## Language\n\n**Tab**:\nA screen.\n',
+  )
+  fs.writeFileSync(path.join(legacyDir, 'CONTEXT.md'), '# Legacy\n')
+  fs.writeFileSync(path.join(project, 'GLOSSARY.md'), '# Root\n')
+  fs.writeFileSync(path.join(project, 'CONTEXT.md'), '# Stale root\n')
+
+  const { language, terms } = buildReadableTree(project)
+
+  assert.deepEqual(language, [
+    { title: 'Glossary Map', path: 'GLOSSARY-MAP.md', contextName: 'Glossary Map' },
+    { title: 'Mobile', path: 'apps/mobile/GLOSSARY.md', contextName: 'Mobile' },
+    { title: 'Legacy', path: 'apps/legacy/CONTEXT.md', contextName: 'Legacy' },
+    { title: 'Root', path: 'GLOSSARY.md', contextName: 'Root' },
+  ])
+  assert.equal(get(find(terms, (record) => record.term === 'Tab'), 'rel'), 'apps/mobile')
+})
+
 test('language omits a mapped CONTEXT.md symlink that leaves the Project', () => {
   const project = fs.mkdtempSync(path.join(os.tmpdir(), 'wayfinder-language-symlink-'))
   const apps = path.join(project, 'apps')
